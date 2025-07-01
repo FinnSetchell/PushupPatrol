@@ -1,6 +1,7 @@
 package com.example.pushuppatrol // Replace with your actual package name
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
@@ -8,13 +9,21 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.Preview
+import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.google.common.util.concurrent.ListenableFuture
+import com.google.android.gms.tasks.Task
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.pose.Pose
+import com.google.mlkit.vision.pose.PoseDetection
+import com.google.mlkit.vision.pose.PoseDetector
+import com.google.mlkit.vision.pose.accurate.AccuratePoseDetectorOptions
+// If you chose the base model instead of accurate:
+// import com.google.mlkit.vision.pose.defaults.PoseDetectorOptions
+import kotlin.collections.List
+import kotlin.collections.isNotEmpty
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -22,12 +31,16 @@ class PushupActivity : AppCompatActivity() {
 
     private lateinit var previewView: PreviewView
     private lateinit var pushupCountText: TextView
-    private lateinit var doneButton: Button // Added for Micro-Goal 1.4
+    private lateinit var doneButton: Button
 
     private lateinit var cameraExecutor: ExecutorService
-    private lateinit var cameraProviderFuture: ListenableFuture<ProcessCameraProvider>
+    // private lateinit var cameraProviderFuture: ListenableFuture<ProcessCameraProvider> // Already declared
 
-    private var pushupCount = 0 // For Micro-Goal 1.3
+    private var pushupCount = 0
+
+    // For ML Kit Pose Detection
+    private lateinit var poseDetector: PoseDetector
+    private var isProcessingFrame = false // To prevent processing multiple frames simultaneously
 
     companion object {
         private const val TAG = "PushupActivity"
@@ -41,10 +54,13 @@ class PushupActivity : AppCompatActivity() {
 
         previewView = findViewById(R.id.previewView)
         pushupCountText = findViewById(R.id.pushupCountText)
-        doneButton = findViewById(R.id.doneButton) // For Micro-Goal 1.4
+        doneButton = findViewById(R.id.doneButton)
 
         cameraExecutor = Executors.newSingleThreadExecutor()
-        cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+        // cameraProviderFuture = ProcessCameraProvider.getInstance(this) // Already initialized
+
+        // Initialize ML Kit Pose Detector
+        initializePoseDetector()
 
         if (allPermissionsGranted()) {
             startCamera()
@@ -53,8 +69,15 @@ class PushupActivity : AppCompatActivity() {
                 this, REQUIRED_PERMISSIONS, CAMERA_PERMISSION_REQUEST_CODE
             )
         }
+    }
 
-        // Done button functionality will be added in Micro-Goal 1.4
+    private fun initializePoseDetector() {
+        // Using the accurate model
+        val options = AccuratePoseDetectorOptions.Builder()
+            .setDetectorMode(AccuratePoseDetectorOptions.STREAM_MODE) // For live video
+            .build()
+        poseDetector = PoseDetection.getClient(options)
+        Log.d(TAG, "Pose Detector Initialized")
     }
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
@@ -62,6 +85,8 @@ class PushupActivity : AppCompatActivity() {
     }
 
     private fun startCamera() {
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+
         cameraProviderFuture.addListener({
             val cameraProvider = cameraProviderFuture.get()
 
@@ -69,20 +94,72 @@ class PushupActivity : AppCompatActivity() {
                 it.setSurfaceProvider(previewView.surfaceProvider)
             }
 
+            // Setup ImageAnalysis use case
+            val imageAnalysis = ImageAnalysis.Builder()
+                // Set target resolution if needed, otherwise CameraX will determine optimal
+                // .setTargetResolution(Size(640, 480)) // Example
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST) // Process only the latest frame
+                .build()
+
+            imageAnalysis.setAnalyzer(cameraExecutor, ImageAnalysis.Analyzer { imageProxy ->
+                if (isProcessingFrame) {
+                    imageProxy.close() // Close the image if another is being processed
+                    return@Analyzer
+                }
+                isProcessingFrame = true
+                processImageProxy(imageProxy)
+            })
+
             val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
 
             try {
-                cameraProvider.unbindAll() // Unbind use cases before rebinding
-                // Bind use cases to camera
+                cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(
-                    this, cameraSelector, preview // ImageAnalysis will be added in 1.2
+                    this, cameraSelector, preview, imageAnalysis // Add imageAnalysis here
                 )
-                Log.d(TAG, "Camera started successfully")
+                Log.d(TAG, "Camera started successfully with Preview and ImageAnalysis")
             } catch (exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
                 Toast.makeText(this, "Failed to start camera: ${exc.message}", Toast.LENGTH_LONG).show()
             }
         }, ContextCompat.getMainExecutor(this))
+    }
+
+    @SuppressLint("UnsafeOptInUsageError") // Needed for imageProxy.image
+    private fun processImageProxy(imageProxy: ImageProxy) {
+        val mediaImage = imageProxy.image
+        if (mediaImage != null) {
+            val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+
+            poseDetector.process(image)
+                .addOnSuccessListener { pose ->
+                    if (pose != null && pose.allPoseLandmarks.isNotEmpty()) {
+                        // For now, just log that a pose was detected.
+                        // We'll use the pose data in the next micro-goal.
+                        Log.d(TAG, "Pose detected! Number of landmarks: ${pose.allPoseLandmarks.size}")
+                        // You can also log specific landmark positions if you want to explore
+                        // val nose = poses[0].getPoseLandmark(PoseLandmark.NOSE)
+                        // if (nose != null) {
+                        //     Log.d(TAG, "Nose position: ${nose.position.x}, ${nose.position.y}")
+                        // }
+                    } else {
+                        Log.d(TAG, "No pose detected in this frame (or pose has no landmarks).")
+                    }
+                }
+                .addOnFailureListener { e ->
+                    Log.e(TAG, "Pose detection failed", e)
+                }
+                .addOnCompleteListener {
+                    // Crucial: close the imageProxy when processing is done
+                    // to allow the next frame to be processed.
+                    imageProxy.close()
+                    isProcessingFrame = false // Allow next frame to be processed
+                }
+        } else {
+            Log.e(TAG, "MediaImage is null, skipping processing.")
+            imageProxy.close() // Still need to close it
+            isProcessingFrame = false
+        }
     }
 
 
@@ -95,8 +172,6 @@ class PushupActivity : AppCompatActivity() {
                 startCamera()
             } else {
                 Toast.makeText(this, "Camera permission is required to count push-ups.", Toast.LENGTH_LONG).show()
-                // Optionally, you could finish the activity or disable functionality
-                // For now, we'll just show a toast.
             }
         }
     }
@@ -104,5 +179,8 @@ class PushupActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         cameraExecutor.shutdown()
+        if (::poseDetector.isInitialized) { // Check if initialized before closing
+            poseDetector.close() // Release ML Kit resources
+        }
     }
 }
