@@ -84,30 +84,24 @@ class MainActivity : AppCompatActivity() {
         }
 
         resetTimeButton.setOnClickListener {
-            timeBankManager.clearTimeBank() // Assuming clearTimeBank sets time to 0
+            timeBankManager.clearTimeBank()
             updateDisplayedTime()
             Toast.makeText(this, "Time bank reset!", Toast.LENGTH_SHORT).show()
             Log.d("MainActivity", "Time bank cleared by user.")
         }
 
-        // +++ SET ONCLICK LISTENER FOR THE DEV BUTTON +++
         devAdd10SecondsButton.setOnClickListener {
-            // IMPORTANT: Ensure your TimeBankManager has a way to ADD seconds.
-            // If addTime(seconds: Int) exists:
-            // timeBankManager.addTime(10)
 
-            // If you created addTimeSeconds(seconds: Int):
-            timeBankManager.addTimeSeconds(10) // Let's use this assumed method
+            timeBankManager.addTimeSeconds(10)
 
-            updateDisplayedTime() // Update the UI
+            updateDisplayedTime()
             Toast.makeText(this, "+10 seconds added!", Toast.LENGTH_SHORT).show()
             Log.d("MainActivity_Dev", "Developer added 10 seconds. New total: ${timeBankManager.getTimeSeconds()}s")
         }
-        // ++++++++++++++++++++++++++++++++++++++++++++++
 
         askNotificationPermission()
-        updateDisplayedTime() // Initial update of displayed time
-        updateAccessibilityButtonState() // Initial update of accessibility button
+        updateDisplayedTime()
+        updateAccessibilityButtonState()
     }
 
     override fun onResume() {

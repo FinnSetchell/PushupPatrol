@@ -123,11 +123,9 @@ class TimerService : Service() {
             try {
                 val initialTimeSeconds = timeBankManager.getTimeSeconds()
                 if (initialTimeSeconds <= 0) {
-                    Log.i(TAG, "Initial time is zero or less for $appBeingMonitored. Sending time expired broadcast and stopping.")
-                    sendBroadcast(Intent(BROADCAST_TIME_EXPIRED).apply {
-                        putExtra(EXTRA_APP_PACKAGE, appBeingMonitored)
-                    })
-                    stopSelf() // Stop the service
+                    Log.i(TAG, "Time is up in coroutine for $appBeingMonitored. Reporting to AppBlockerEventManager.")
+                    AppBlockerEventManager.reportTimeExpired(appBeingMonitored)
+                    stopSelf()
                     return@launch // Exit this coroutine
                 }
 
@@ -152,12 +150,10 @@ class TimerService : Service() {
                         updateNotification("Time left: ${formatTime(newRemainingTime)} for ${getAppNameFromString(appBeingMonitored)}")
 
                         if (newRemainingTime <= 0) {
-                            Log.i(TAG, "Time is up in coroutine for $appBeingMonitored. Sending broadcast.")
-                            sendBroadcast(Intent(BROADCAST_TIME_EXPIRED).apply {
-                                putExtra(EXTRA_APP_PACKAGE, appBeingMonitored)
-                            })
-                            stopSelf() // Stop the service itself
-                            break      // Exit loop
+                            Log.i(TAG, "Time is up in coroutine for $appBeingMonitored. Reporting to AppBlockerEventManager.")
+                            AppBlockerEventManager.reportTimeExpired(appBeingMonitored)
+                            stopSelf()
+                            break
                         }
                     } else {
                         // This case means useTime(1) failed, which could happen if time was already <=0
@@ -165,9 +161,7 @@ class TimerService : Service() {
                         Log.w(TAG, "Failed to use 1 second for $appBeingMonitored. Current time: $newRemainingTime s.")
                         if (newRemainingTime <= 0) {
                             Log.i(TAG, "Time found to be zero or less after failed useTime for $appBeingMonitored. Sending broadcast.")
-                            sendBroadcast(Intent(BROADCAST_TIME_EXPIRED).apply {
-                                putExtra(EXTRA_APP_PACKAGE, appBeingMonitored)
-                            })
+                            AppBlockerEventManager.reportTimeExpired(appBeingMonitored)
                             stopSelf()
                             break
                         }
