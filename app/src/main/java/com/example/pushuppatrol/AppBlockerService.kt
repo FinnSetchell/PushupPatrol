@@ -6,11 +6,15 @@ import android.content.Intent
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
-import kotlin.io.path.name
+import androidx.core.content.ContextCompat
+
 
 class AppBlockerService : AccessibilityService() {
 
     private lateinit var timeBankManager: TimeBankManager
+    private var lastStartedAppPackage: String? = null
+    private var lastStartTimeMillis: Long = 0
+    private val startDebounceMillis = 500 // 0.5 seconds debounce window
 
     // TODO: Later, this list will be populated from SharedPreferences (Phase 3)
     // For now, hardcode package names for testing.
@@ -60,17 +64,77 @@ class AppBlockerService : AccessibilityService() {
 
                 if (remainingTimeSeconds <= 0) {
                     Log.i(TAG, "Time is up for $packageName. Launching PushupActivity.")
-                    // Launch PushupActivity as a lock screen
                     val intent = Intent(this, PushupActivity::class.java).apply {
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        // Optional: Add a flag to indicate it's a lock screen
-                        // intent.putExtra("isLockScreen", true)
                     }
                     startActivity(intent)
                 } else {
-                    // Time is available.
-                    // In Micro-Goal 2.2, we will start the TimerService here if it's not already running.
-                    Log.d(TAG, "$packageName is a locked app, but time is available ($remainingTimeSeconds s).")
+                    // Time is available. Start the TimerService if it's not already running for this app.
+                    Log.d(TAG, "$packageName is a locked app, time available ($remainingTimeSeconds s). Starting TimerService.")
+                    val serviceIntent = Intent(this, TimerService::class.java).apply {
+                        action = TimerService.ACTION_START_TIMER
+                        putExtra(TimerService.EXTRA_APP_PACKAGE, packageName)
+                    }
+                    // Use ContextCompat.startForegroundService for wider compatibility
+                    ContextCompat.startForegroundService(this, serviceIntent)
+                }
+            }
+        }
+
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
+            event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
+
+            val packageName = event.packageName?.toString()
+            val className = event.className?.toString()
+            Log.d(TAG, "Event: pkg=$packageName, class=$className")
+
+            if (packageName != null) {
+                val isCurrentAppOurPushupActivity = packageName == applicationContext.packageName && className == PushupActivity::class.java.name
+                val isCurrentAppOurMainActivity = packageName == applicationContext.packageName && className == MainActivity::class.java.name
+
+                if (packageName in lockedAppPackages && !isCurrentAppOurPushupActivity && !isCurrentAppOurMainActivity) {
+                    // A locked app is foreground
+                    val remainingTimeSeconds = timeBankManager.getTimeSeconds()
+                    Log.d(TAG, "Locked app detected: $packageName. Time remaining: $remainingTimeSeconds seconds.")
+
+                    if (remainingTimeSeconds <= 0) {
+                        Log.i(TAG, "Time is up for $packageName. Launching PushupActivity.")
+                        // Stop TimerService before launching PushupActivity
+                        val stopIntent = Intent(this, TimerService::class.java).apply {
+                            action = TimerService.ACTION_STOP_TIMER
+                        }
+                        ContextCompat.startForegroundService(this, stopIntent) // Send stop command
+
+                        val intent = Intent(this, PushupActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                            putExtra(PushupActivity.EXTRA_BLOCKED_APP_NAME, packageName)
+                        }
+                        startActivity(intent)
+                    } else {
+                        val currentTimeMillis = System.currentTimeMillis()
+                        // Check if we recently started the timer for this exact app
+                        if (packageName == lastStartedAppPackage && (currentTimeMillis - lastStartTimeMillis) < startDebounceMillis) {
+                            Log.d(TAG, "Debouncing ACTION_START_TIMER for $packageName, recently started.")
+                        } else {
+                            Log.d(TAG, "$packageName is a locked app, time available. Ensuring TimerService is running.")
+                            val serviceIntent = Intent(this, TimerService::class.java).apply {
+                                action = TimerService.ACTION_START_TIMER
+                                putExtra(TimerService.EXTRA_APP_PACKAGE, packageName)
+                            }
+                            ContextCompat.startForegroundService(this, serviceIntent)
+                            lastStartedAppPackage = packageName // Record this start
+                            lastStartTimeMillis = currentTimeMillis // Record time of this start
+                        }                    }
+                } else {
+                    // Not a locked app or our own UI
+                    Log.d(TAG, "Non-locked app ($packageName) or own app UI detected. Considering stopping TimerService.")
+                    val stopIntent = Intent(this, TimerService::class.java).apply {
+                        action = TimerService.ACTION_STOP_TIMER
+                    }
+                    ContextCompat.startForegroundService(this, stopIntent)
+                    Log.d(TAG, "Sent ACTION_STOP_TIMER to TimerService for $packageName")
+                    lastStartedAppPackage = null // Clear last started app if we are stopping the timer
+
                 }
             }
         }

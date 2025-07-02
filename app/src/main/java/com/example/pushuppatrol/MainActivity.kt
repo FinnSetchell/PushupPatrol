@@ -10,6 +10,12 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -17,6 +23,40 @@ class MainActivity : AppCompatActivity() {
     private lateinit var timeDisplayTextView: TextView
     private lateinit var enableAccessibilityButton: Button
     private lateinit var resetTimeButton: Button // Declare the new button
+
+    private val requestPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+            if (isGranted) {
+                Log.i("MainActivity", "POST_NOTIFICATIONS permission granted by user.")
+                // You could trigger a re-check or update UI if needed
+            } else {
+                Log.w("MainActivity", "POST_NOTIFICATIONS permission denied by user.")
+                Toast.makeText(
+                    this,
+                    "Notifications permission denied. Timer updates will not be shown.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+
+    private fun askNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) { // API 33+
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                Log.d("MainActivity", "POST_NOTIFICATIONS permission already granted.")
+            } else if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
+                // TODO: Show an educational UI to the user explaining why you need the permission.
+                // For now, we'll just request it directly.
+                Log.d("MainActivity", "Showing rationale (or just requesting) for POST_NOTIFICATIONS.")
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                // Directly ask for the permission if it hasn't been requested before or if rationale isn't needed
+                Log.d("MainActivity", "Requesting POST_NOTIFICATIONS permission.")
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,6 +92,9 @@ class MainActivity : AppCompatActivity() {
             Log.d("MainActivity", "Time bank cleared by user.")
         }
         // --- End OnClickListener ---
+
+        // Ask for notification permission when MainActivity is created or resumed
+        askNotificationPermission()
     }
 
     override fun onResume() {

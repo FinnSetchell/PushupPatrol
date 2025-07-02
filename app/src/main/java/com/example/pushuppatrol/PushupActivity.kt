@@ -1,7 +1,5 @@
 package com.example.pushuppatrol // Replace with your actual package name
 
-// If you chose the base model instead of accurate:
-// import com.google.mlkit.vision.pose.defaults.PoseDetectorOptions
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
@@ -33,54 +31,57 @@ class PushupActivity : AppCompatActivity() {
     private lateinit var previewView: PreviewView
     private lateinit var pushupCountText: TextView
     private lateinit var doneButton: Button
+    private lateinit var blockedAppInfoText: TextView // To display which app was blocked
 
     private lateinit var cameraExecutor: ExecutorService
-    // private lateinit var cameraProviderFuture: ListenableFuture<ProcessCameraProvider> // Already declared
-
-    // For push-up counting logic
     private var pushupCount = 0
     private enum class PushupState {
-        UP, DOWN, UNKNOWN // UNKNOWN or NEUTRAL state initially
+        UP, DOWN, UNKNOWN
     }
     private var currentPushupState: PushupState = PushupState.UNKNOWN
-    private var lastNoseY: Float = 0.0f
+    private var upReferenceY: Float = -1f
+    private val downThresholdFactor = 0.25f
+    private val upThresholdFactor = 0.15f
 
-    // Thresholds - these might need tuning based on testing
-    // Represents how much the nose has to move down from its highest point to be considered 'DOWN'
-    private val downThresholdFactor = 0.25f // e.g., 25% of preview height from initial 'UP'
-    // Represents how much the nose has to move up from a 'DOWN' state to be considered 'UP'
-    private val upThresholdFactor = 0.15f // e.g., 15% of preview height from 'DOWN'
-
-    private var upReferenceY: Float = -1f // Stores the Y of the nose when in a clear UP state
-
-    // For ML Kit Pose Detection
     private lateinit var poseDetector: PoseDetector
-    private var isProcessingFrame = false // To prevent processing multiple frames simultaneously
+    private var isProcessingFrame = false
 
-    // For Time Bank management
-    private lateinit var timeBankManager: TimeBankManager // New
+    private lateinit var timeBankManager: TimeBankManager
+    private var blockedAppNameExtra: String? = null // To store the package name passed via intent
 
     companion object {
         private const val TAG = "PushupActivity"
         private const val CAMERA_PERMISSION_REQUEST_CODE = 1001
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
+        // Ensure this matches what AppBlockerService uses to send the extra
+        const val EXTRA_BLOCKED_APP_NAME = "com.example.pushuppatrol.EXTRA_BLOCKED_APP_NAME"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_pushup)
+        setContentView(R.layout.activity_pushup) // Ensure this layout exists and has the views
 
         previewView = findViewById(R.id.previewView)
         pushupCountText = findViewById(R.id.pushupCountText)
         doneButton = findViewById(R.id.doneButton)
+        blockedAppInfoText = findViewById(R.id.blockedAppInfoText) // Make sure you add this TextView to your activity_pushup.xml
+
         timeBankManager = TimeBankManager(applicationContext)
+        cameraExecutor = Executors.newSingleThreadExecutor()
+
+        // Get the blocked app package name from the intent
+        blockedAppNameExtra = intent.getStringExtra(EXTRA_BLOCKED_APP_NAME)
+        Log.d(TAG, "PushupActivity started. App that ran out of time: $blockedAppNameExtra")
+
+        if (blockedAppNameExtra != null) {
+            // Try to get the user-friendly app name
+            val friendlyAppName = getAppNameFromPackage(blockedAppNameExtra!!)
+            blockedAppInfoText.text = "Time's up for: $friendlyAppName"
+        } else {
+            blockedAppInfoText.text = "Time's up!" // Default message
+        }
 
         pushupCountText.text = "Push-ups: $pushupCount"
-
-        cameraExecutor = Executors.newSingleThreadExecutor()
-        // cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-
-        // Initialize ML Kit Pose Detector
         initializePoseDetector()
 
         if (allPermissionsGranted()) {
@@ -91,20 +92,34 @@ class PushupActivity : AppCompatActivity() {
             )
         }
 
-        // Make the Done button visible (it was GONE in XML)
-        // and set its OnClickListener
-        doneButton.visibility = View.VISIBLE // Make it visible
+        doneButton.visibility = View.VISIBLE
         doneButton.setOnClickListener {
-            timeBankManager.addPushups(pushupCount)
+            // Original logic: add pushups to time bank and finish
+            // You might want to adjust how much time is added per session or per pushup later
+            timeBankManager.addPushups(pushupCount) // Assumes TimeBankManager.addPushups() exists
             Toast.makeText(this, "$pushupCount push-ups added! Total time: ${timeBankManager.getTimeSeconds() / 60} mins", Toast.LENGTH_LONG).show()
-            finish() // Close PushupActivity
+
+            // If a specific app was blocked, you might want to send a broadcast or signal
+            // that time has been earned for it, so AppBlockerService can allow access again.
+            // For now, just finishing and the user can try reopening.
+            finish()
+        }
+    }
+
+    private fun getAppNameFromPackage(packageName: String): String {
+        return try {
+            val packageManager = applicationContext.packageManager
+            val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
+            packageManager.getApplicationLabel(applicationInfo).toString()
+        } catch (e: PackageManager.NameNotFoundException) {
+            Log.e(TAG, "Failed to get app name for $packageName", e)
+            packageName // Fallback to package name if not found
         }
     }
 
     private fun initializePoseDetector() {
-        // Using the accurate model
         val options = AccuratePoseDetectorOptions.Builder()
-            .setDetectorMode(AccuratePoseDetectorOptions.STREAM_MODE) // For live video
+            .setDetectorMode(AccuratePoseDetectorOptions.STREAM_MODE)
             .build()
         poseDetector = PoseDetection.getClient(options)
         Log.d(TAG, "Pose Detector Initialized")
@@ -116,24 +131,18 @@ class PushupActivity : AppCompatActivity() {
 
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-
         cameraProviderFuture.addListener({
             val cameraProvider = cameraProviderFuture.get()
-
             val preview = Preview.Builder().build().also {
                 it.setSurfaceProvider(previewView.surfaceProvider)
             }
-
-            // Setup ImageAnalysis use case
             val imageAnalysis = ImageAnalysis.Builder()
-                // Set target resolution if needed, otherwise CameraX will determine optimal
-                // .setTargetResolution(Size(640, 480)) // Example
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST) // Process only the latest frame
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
 
             imageAnalysis.setAnalyzer(cameraExecutor, ImageAnalysis.Analyzer { imageProxy ->
                 if (isProcessingFrame) {
-                    imageProxy.close() // Close the image if another is being processed
+                    imageProxy.close()
                     return@Analyzer
                 }
                 isProcessingFrame = true
@@ -141,109 +150,78 @@ class PushupActivity : AppCompatActivity() {
             })
 
             val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
-
             try {
                 cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(
-                    this, cameraSelector, preview, imageAnalysis // Add imageAnalysis here
+                    this, cameraSelector, preview, imageAnalysis
                 )
-                Log.d(TAG, "Camera started successfully with Preview and ImageAnalysis")
             } catch (exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
-                Toast.makeText(this, "Failed to start camera: ${exc.message}", Toast.LENGTH_LONG).show()
             }
         }, ContextCompat.getMainExecutor(this))
     }
 
-    @SuppressLint("UnsafeOptInUsageError") // Needed for imageProxy.image
+    @SuppressLint("UnsafeOptInUsageError")
     private fun processImageProxy(imageProxy: ImageProxy) {
         val mediaImage = imageProxy.image
         if (mediaImage != null) {
             val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-
             poseDetector.process(image)
                 .addOnSuccessListener { pose ->
                     if (pose != null && pose.allPoseLandmarks.isNotEmpty()) {
-                        // Log.d(TAG, "Pose detected! Number of landmarks: ${pose.allPoseLandmarks.size}") // Keep for debugging if needed
-
-                        // --- START PUSH-UP LOGIC (Micro-Goal 1.3) ---
                         val nose = pose.getPoseLandmark(PoseLandmark.NOSE)
                         val leftShoulder = pose.getPoseLandmark(PoseLandmark.LEFT_SHOULDER)
                         val rightShoulder = pose.getPoseLandmark(PoseLandmark.RIGHT_SHOULDER)
 
                         if (nose != null && leftShoulder != null && rightShoulder != null) {
-                            val noseY = nose.position.y
-                            // Use average shoulder Y as a more stable reference than just nose
                             val shoulderY = (leftShoulder.position.y + rightShoulder.position.y) / 2f
-
-                            // Use shoulderY for state determination for more robustness against head tilting
                             val currentY = shoulderY
 
-                            if (previewView.height == 0) { // Ensure previewView is laid out
+                            if (previewView.height == 0) {
                                 imageProxy.close()
                                 isProcessingFrame = false
                                 return@addOnSuccessListener
                             }
 
-                            // Initialize upReferenceY if not set, or if user is clearly higher
                             if (upReferenceY == -1f || currentY < upReferenceY) {
-                                // Only set new upReferenceY if they are significantly higher than a potential 'DOWN' state
-                                // or if current state isn't already DOWN (to avoid setting UP when they are actually moving up from DOWN)
                                 if (currentPushupState != PushupState.DOWN || currentY < upReferenceY * (1 - upThresholdFactor * 0.5f) ) {
                                     upReferenceY = currentY
-                                    Log.d(TAG, "New UP reference Y: $upReferenceY")
                                 }
                             }
 
-
-                            // Define dynamic thresholds based on previewView height
-                            // This is a simple approach. More advanced would be normalizing coordinates.
-                            val movementRange = previewView.height * 0.3 // Assume push-up movement is roughly 30% of view height
+                            val movementRange = previewView.height * 0.3
                             val downThreshold = upReferenceY + (movementRange * downThresholdFactor)
-                            val upThreshold = upReferenceY + (movementRange * (downThresholdFactor - upThresholdFactor)) // upThreshold is higher than downThreshold
-
-                            // Log Y values and thresholds for tuning:
-                            // Log.d(TAG, "Nose Y: $noseY, Shoulder Y: $currentY, UpRef: $upReferenceY, DownThresh: $downThreshold, UpThresh: $upThreshold, State: $currentPushupState")
-
+                            val upThreshold = upReferenceY + (movementRange * (downThresholdFactor - upThresholdFactor))
 
                             when (currentPushupState) {
                                 PushupState.UNKNOWN, PushupState.UP -> {
                                     if (currentY > downThreshold) {
                                         currentPushupState = PushupState.DOWN
-                                        Log.d(TAG, "STATE CHANGE: -> DOWN")
                                     }
                                 }
                                 PushupState.DOWN -> {
                                     if (currentY < upThreshold) {
                                         currentPushupState = PushupState.UP
                                         pushupCount++
-                                        Log.d(TAG, "STATE CHANGE: -> UP (COUNT: $pushupCount)")
-                                        runOnUiThread { // Update UI on the main thread
+                                        runOnUiThread {
                                             pushupCountText.text = "Push-ups: $pushupCount"
                                         }
-                                        // Reset upReferenceY to current position after a successful push-up
-                                        // to adapt to user possibly shifting position slightly.
                                         upReferenceY = currentY
                                     }
                                 }
                             }
                         } else {
-                            // Nose or shoulders not detected, reset state or handle as needed
                             currentPushupState = PushupState.UNKNOWN
-                            upReferenceY = -1f // Reset reference if key landmarks are lost
-                            Log.d(TAG, "Nose or shoulders not visible, state UNKNOWN")
+                            upReferenceY = -1f
                         }
-                        // --- END PUSH-UP LOGIC ---
-
                     } else {
-                        // Log.d(TAG, "No pose detected (or pose has no landmarks). State UNKNOWN.")
                         currentPushupState = PushupState.UNKNOWN
-                        upReferenceY = -1f // Reset reference if pose is lost
+                        upReferenceY = -1f
                     }
                 }
                 .addOnFailureListener { e ->
                     Log.e(TAG, "Pose detection failed", e)
-                    currentPushupState = PushupState.UNKNOWN // Reset state on failure
+                    currentPushupState = PushupState.UNKNOWN
                     upReferenceY = -1f
                 }
                 .addOnCompleteListener {
@@ -251,12 +229,10 @@ class PushupActivity : AppCompatActivity() {
                     isProcessingFrame = false
                 }
         } else {
-            Log.e(TAG, "MediaImage is null, skipping processing.")
             imageProxy.close()
             isProcessingFrame = false
         }
     }
-
 
     override fun onRequestPermissionsResult(
         requestCode: Int, permissions: Array<String>, grantResults: IntArray
@@ -266,16 +242,23 @@ class PushupActivity : AppCompatActivity() {
             if (allPermissionsGranted()) {
                 startCamera()
             } else {
-                Toast.makeText(this, "Camera permission is required to count push-ups.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Camera permission is required.", Toast.LENGTH_LONG).show()
+                finish() // Or handle differently
             }
         }
+    }
+
+    // Optional: Prevent back press from easily dismissing the activity if time is up.
+    override fun onBackPressed() {
+        // super.onBackPressed() // Comment out to disable back button
+        Toast.makeText(this, "Please complete your push-ups to earn more time.", Toast.LENGTH_SHORT).show()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         cameraExecutor.shutdown()
-        if (::poseDetector.isInitialized) { // Check if initialized before closing
-            poseDetector.close() // Release ML Kit resources
+        if (::poseDetector.isInitialized) {
+            poseDetector.close()
         }
     }
 }
