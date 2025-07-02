@@ -1,15 +1,22 @@
 package com.example.pushuppatrol
 
+import android.content.Context
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.provider.Settings
+import android.text.TextUtils
+import android.util.Log
 import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var timeBankManager: TimeBankManager
-    private lateinit var timeDisplayTextView: TextView // For displaying time
+    private lateinit var timeDisplayTextView: TextView
+    private lateinit var enableAccessibilityButton: Button
+    private lateinit var resetTimeButton: Button // Declare the new button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -22,18 +29,91 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, PushupActivity::class.java))
         }
 
-        // --- Temporary Time Display ---
-        timeDisplayTextView = findViewById(R.id.tempTimeDisplay) // Add this ID to activity_main.xml
-        // --- End Temporary Time Display ---
+        timeDisplayTextView = findViewById(R.id.tempTimeDisplay)
+        enableAccessibilityButton = findViewById(R.id.enableAccessibilityButton)
+        resetTimeButton = findViewById(R.id.resetTimeButton) // Initialize the new button
+
+        enableAccessibilityButton.setOnClickListener {
+            try {
+                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                startActivity(intent)
+                Toast.makeText(this, "Find 'Push-up Patrol Blocker' and enable it.", Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                Toast.makeText(this, "Could not open Accessibility Settings.", Toast.LENGTH_SHORT).show()
+                Log.e("MainActivity", "Error opening accessibility settings", e)
+            }
+        }
+
+        // --- Add OnClickListener for Reset Time Button ---
+        resetTimeButton.setOnClickListener {
+            timeBankManager.clearTimeBank() // Call the method in TimeBankManager
+            updateDisplayedTime() // Update the UI
+            Toast.makeText(this, "Time bank reset!", Toast.LENGTH_SHORT).show()
+            Log.d("MainActivity", "Time bank cleared by user.")
+        }
+        // --- End OnClickListener ---
     }
 
     override fun onResume() {
         super.onResume()
-        // --- Temporary Time Display Update ---
+        updateDisplayedTime() // Call helper to update time
+        updateAccessibilityButtonState() // Call helper to update accessibility button
+    }
+
+    // Helper function to update the displayed time
+    private fun updateDisplayedTime() {
         val totalSeconds = timeBankManager.getTimeSeconds()
         val minutes = totalSeconds / 60
         val seconds = totalSeconds % 60
         timeDisplayTextView.text = "Time Bank: ${minutes}m ${seconds}s"
-        // --- End Temporary Time Display Update ---
+    }
+
+    // Helper function to update accessibility button state
+    private fun updateAccessibilityButtonState() {
+        if (isAccessibilityServiceEnabled()) {
+            enableAccessibilityButton.text = "Accessibility Service Enabled"
+            enableAccessibilityButton.isEnabled = false
+        } else {
+            enableAccessibilityButton.text = "Enable App Blocker Service"
+            enableAccessibilityButton.isEnabled = true
+        }
+    }
+
+    private fun isAccessibilityServiceEnabled(): Boolean {
+        // ... (your existing isAccessibilityServiceEnabled function)
+        var accessibilityEnabled = 0
+        val serviceId = "${packageName}/${AppBlockerService::class.java.canonicalName}"
+        // Log.d("MainActivity", "Checking for service: $serviceId") // Keep this for debugging
+
+        try {
+            accessibilityEnabled = Settings.Secure.getInt(
+                applicationContext.contentResolver,
+                Settings.Secure.ACCESSIBILITY_ENABLED
+            )
+        } catch (e: Settings.SettingNotFoundException) {
+            // Log.e("MainActivity", "Accessibility not found in settings.", e) // Keep this
+            return false
+        }
+
+        val colonSplitter = TextUtils.SimpleStringSplitter(':')
+
+        if (accessibilityEnabled == 1) {
+            val settingValue = Settings.Secure.getString(
+                applicationContext.contentResolver,
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            )
+            if (settingValue != null) {
+                colonSplitter.setString(settingValue)
+                while (colonSplitter.hasNext()) {
+                    val accessibilityService = colonSplitter.next()
+                    if (accessibilityService.equals(serviceId, ignoreCase = true)) {
+                        // Log.i("MainActivity", "AppBlockerService is ENABLED") // Keep this
+                        return true
+                    }
+                }
+            }
+        }
+        // Log.w("MainActivity", "AppBlockerService is DISABLED") // Keep this
+        return false
     }
 }

@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">PushupPatrol</string>
+    <string name="accessibility_service_label">Push-up Patrol Blocker</string>
+    <string name="accessibility_service_description">Push-up Patrol needs this permission to detect
+        when selected apps are opened, so it can block them if your earned time has run out. This
+        helps you stay focused by requiring push-ups to regain access.
+    </string>
 </resources>

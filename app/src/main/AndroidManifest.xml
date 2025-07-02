@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+
     <uses-feature android:name="android.hardware.camera.any" />
+
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- If your app targets API 33 or lower, FOREGROUND_SERVICE_SPECIAL_USE is not needed. -->
+
 
     <application
         android:allowBackup="true"
@@ -14,6 +20,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.PushupPatrol"
         tools:targetApi="31">
+        <service
+            android:name=".TimerService"
+            android:enabled="true"
+            android:exported="false"></service>
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -26,6 +37,34 @@
         <activity
             android:name=".PushupActivity"
             android:exported="false" />
+
+        <service
+            android:name=".AppBlockerService"
+            android:exported="true"
+            android:label="@string/accessibility_service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <!-- Optional: Metadata for configuration -->
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <service
+            android:name=".TimerService"
+            android:enabled="true"
+            android:exported="false">
+            <!-- For Android 14 (API 34) and above, if using FOREGROUND_SERVICE_SPECIAL_USE -->
+            <!-- You might also need to declare a foregroundServiceType in the service tag -->
+            <!-- <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                  android:value="explanation_for_special_use" /> -->
+            <!-- Let's hold off on the property tag unless runtime/lint demands it,
+                 as the exact policy for "special_use" can be nuanced.
+                 For Android 12+, foregroundServiceType in the service tag is also important. -->
+        </service>
+
     </application>
 
 </manifest>
