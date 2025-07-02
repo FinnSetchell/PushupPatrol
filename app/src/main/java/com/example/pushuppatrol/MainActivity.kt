@@ -60,12 +60,12 @@ class MainActivity : AppCompatActivity() {
 
         timeBankManager = TimeBankManager(applicationContext)
 
-        val tempLaunchButton: Button = findViewById(R.id.tempLaunchPushupActivityButton)
+        val tempLaunchButton: Button = findViewById(R.id.btnEarnTime)
         tempLaunchButton.setOnClickListener {
             startActivity(Intent(this, PushupActivity::class.java))
         }
 
-        timeDisplayTextView = findViewById(R.id.tempTimeDisplay)
+        timeDisplayTextView = findViewById(R.id.tvTimeRemaining)
         enableAccessibilityButton = findViewById(R.id.enableAccessibilityButton)
         resetTimeButton = findViewById(R.id.resetTimeButton)
         // +++ INITIALIZE THE NEW DEV BUTTON +++

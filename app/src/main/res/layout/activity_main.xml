@@ -2,73 +2,86 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+    <!-- Main Status Display - The "Hero" Element -->
     <TextView
-        android:id="@+id/helloWorldText"
+        android:id="@+id/tvTimeRemaining"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Hello World!"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginTop="64dp"
+        android:textStyle="bold"
+        android:textSize="48sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="15:32" />
+
+    <!-- Main User Actions -->
+    <Button
+        android:id="@+id/btnEarnTime"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:padding="16dp"
+        android:text="EARN MORE TIME"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvTimeRemaining"
+        app:layout_constraintWidth_percent="0.7" />
 
     <Button
-        android:id="@+id/tempLaunchPushupActivityButton"
-        android:layout_width="wrap_content"
+        android:id="@+id/btnSelectApps"
+        style="?attr/materialButtonOutlinedStyle"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Test Push-up Counter"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
-
-    <TextView
-        android:id="@+id/tempTimeDisplay"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Time Bank: 0m 0s"
-        android:textSize="18sp"
-        app:layout_constraintTop_toBottomOf="@id/tempLaunchPushupActivityButton"
-        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="16dp"
+        android:text="Select Apps to Lock"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="16dp"/>
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btnEarnTime"
+        app:layout_constraintWidth_percent="0.7" />
 
+    <!-- Permissions and Settings (Less Frequent Actions) -->
     <Button
         android:id="@+id/enableAccessibilityButton"
-        android:layout_width="wrap_content"
+        style="?attr/materialButtonOutlinedStyle"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
         android:text="Enable App Blocker Service"
-        app:layout_constraintTop_toBottomOf="@id/tempTimeDisplay"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="16dp"/>
+        app:layout_constraintEnd_toEndOf="@+id/btnSelectApps"
+        app:layout_constraintStart_toStartOf="@+id/btnSelectApps"
+        app:layout_constraintTop_toBottomOf="@id/btnSelectApps" />
 
-    <!-- +++ ADD THIS DEVELOPER BUTTON +++ -->
+
+    <!-- Developer/Debug Tools - Kept at the bottom -->
     <Button
         android:id="@+id/btnDevAdd10Seconds"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Dev: +10s Time"
+        android:layout_marginEnd="8dp"
         android:backgroundTint="#FFC107"
+        android:text="Dev: +10s"
         android:textColor="@android:color/black"
-        app:layout_constraintBottom_toTopOf="@id/resetTimeButton"
+        app:layout_constraintBottom_toBottomOf="@+id/resetTimeButton"
+        app:layout_constraintEnd_toStartOf="@+id/resetTimeButton"
+        app:layout_constraintHorizontal_chainStyle="packed"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginBottom="16dp"/>
+        app:layout_constraintTop_toTopOf="@+id/resetTimeButton" />
 
     <Button
         android:id="@+id/resetTimeButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="32dp"
+        android:layout_marginBottom="24dp"
         android:text="Reset Time"
+        app:backgroundTint="#E53935"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toEndOf="@+id/btnDevAdd10Seconds" />
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>
