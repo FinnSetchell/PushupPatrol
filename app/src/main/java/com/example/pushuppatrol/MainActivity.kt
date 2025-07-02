@@ -1,6 +1,5 @@
 package com.example.pushuppatrol
 
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
@@ -22,13 +21,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var timeBankManager: TimeBankManager
     private lateinit var timeDisplayTextView: TextView
     private lateinit var enableAccessibilityButton: Button
-    private lateinit var resetTimeButton: Button // Declare the new button
+    private lateinit var resetTimeButton: Button
+    private lateinit var devAdd10SecondsButton: Button
 
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
             if (isGranted) {
                 Log.i("MainActivity", "POST_NOTIFICATIONS permission granted by user.")
-                // You could trigger a re-check or update UI if needed
             } else {
                 Log.w("MainActivity", "POST_NOTIFICATIONS permission denied by user.")
                 Toast.makeText(
@@ -40,18 +39,15 @@ class MainActivity : AppCompatActivity() {
         }
 
     private fun askNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) { // API 33+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
                 PackageManager.PERMISSION_GRANTED
             ) {
                 Log.d("MainActivity", "POST_NOTIFICATIONS permission already granted.")
             } else if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
-                // TODO: Show an educational UI to the user explaining why you need the permission.
-                // For now, we'll just request it directly.
-                Log.d("MainActivity", "Showing rationale (or just requesting) for POST_NOTIFICATIONS.")
+                Log.d("MainActivity", "Showing rationale for POST_NOTIFICATIONS.")
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             } else {
-                // Directly ask for the permission if it hasn't been requested before or if rationale isn't needed
                 Log.d("MainActivity", "Requesting POST_NOTIFICATIONS permission.")
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
@@ -71,7 +67,10 @@ class MainActivity : AppCompatActivity() {
 
         timeDisplayTextView = findViewById(R.id.tempTimeDisplay)
         enableAccessibilityButton = findViewById(R.id.enableAccessibilityButton)
-        resetTimeButton = findViewById(R.id.resetTimeButton) // Initialize the new button
+        resetTimeButton = findViewById(R.id.resetTimeButton)
+        // +++ INITIALIZE THE NEW DEV BUTTON +++
+        devAdd10SecondsButton = findViewById(R.id.btnDevAdd10Seconds)
+
 
         enableAccessibilityButton.setOnClickListener {
             try {
@@ -84,26 +83,39 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // --- Add OnClickListener for Reset Time Button ---
         resetTimeButton.setOnClickListener {
-            timeBankManager.clearTimeBank() // Call the method in TimeBankManager
-            updateDisplayedTime() // Update the UI
+            timeBankManager.clearTimeBank() // Assuming clearTimeBank sets time to 0
+            updateDisplayedTime()
             Toast.makeText(this, "Time bank reset!", Toast.LENGTH_SHORT).show()
             Log.d("MainActivity", "Time bank cleared by user.")
         }
-        // --- End OnClickListener ---
 
-        // Ask for notification permission when MainActivity is created or resumed
+        // +++ SET ONCLICK LISTENER FOR THE DEV BUTTON +++
+        devAdd10SecondsButton.setOnClickListener {
+            // IMPORTANT: Ensure your TimeBankManager has a way to ADD seconds.
+            // If addTime(seconds: Int) exists:
+            // timeBankManager.addTime(10)
+
+            // If you created addTimeSeconds(seconds: Int):
+            timeBankManager.addTimeSeconds(10) // Let's use this assumed method
+
+            updateDisplayedTime() // Update the UI
+            Toast.makeText(this, "+10 seconds added!", Toast.LENGTH_SHORT).show()
+            Log.d("MainActivity_Dev", "Developer added 10 seconds. New total: ${timeBankManager.getTimeSeconds()}s")
+        }
+        // ++++++++++++++++++++++++++++++++++++++++++++++
+
         askNotificationPermission()
+        updateDisplayedTime() // Initial update of displayed time
+        updateAccessibilityButtonState() // Initial update of accessibility button
     }
 
     override fun onResume() {
         super.onResume()
-        updateDisplayedTime() // Call helper to update time
-        updateAccessibilityButtonState() // Call helper to update accessibility button
+        updateDisplayedTime()
+        updateAccessibilityButtonState()
     }
 
-    // Helper function to update the displayed time
     private fun updateDisplayedTime() {
         val totalSeconds = timeBankManager.getTimeSeconds()
         val minutes = totalSeconds / 60
@@ -111,7 +123,6 @@ class MainActivity : AppCompatActivity() {
         timeDisplayTextView.text = "Time Bank: ${minutes}m ${seconds}s"
     }
 
-    // Helper function to update accessibility button state
     private fun updateAccessibilityButtonState() {
         if (isAccessibilityServiceEnabled()) {
             enableAccessibilityButton.text = "Accessibility Service Enabled"
@@ -123,23 +134,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun isAccessibilityServiceEnabled(): Boolean {
-        // ... (your existing isAccessibilityServiceEnabled function)
         var accessibilityEnabled = 0
         val serviceId = "${packageName}/${AppBlockerService::class.java.canonicalName}"
-        // Log.d("MainActivity", "Checking for service: $serviceId") // Keep this for debugging
-
         try {
             accessibilityEnabled = Settings.Secure.getInt(
                 applicationContext.contentResolver,
                 Settings.Secure.ACCESSIBILITY_ENABLED
             )
         } catch (e: Settings.SettingNotFoundException) {
-            // Log.e("MainActivity", "Accessibility not found in settings.", e) // Keep this
             return false
         }
 
         val colonSplitter = TextUtils.SimpleStringSplitter(':')
-
         if (accessibilityEnabled == 1) {
             val settingValue = Settings.Secure.getString(
                 applicationContext.contentResolver,
@@ -150,13 +156,11 @@ class MainActivity : AppCompatActivity() {
                 while (colonSplitter.hasNext()) {
                     val accessibilityService = colonSplitter.next()
                     if (accessibilityService.equals(serviceId, ignoreCase = true)) {
-                        // Log.i("MainActivity", "AppBlockerService is ENABLED") // Keep this
                         return true
                     }
                 }
             }
         }
-        // Log.w("MainActivity", "AppBlockerService is DISABLED") // Keep this
         return false
     }
 }
