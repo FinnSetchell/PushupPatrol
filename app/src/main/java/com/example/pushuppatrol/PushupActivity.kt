@@ -7,6 +7,7 @@ import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
@@ -56,6 +57,9 @@ class PushupActivity : AppCompatActivity() {
     private lateinit var poseDetector: PoseDetector
     private var isProcessingFrame = false // To prevent processing multiple frames simultaneously
 
+    // For Time Bank management
+    private lateinit var timeBankManager: TimeBankManager // New
+
     companion object {
         private const val TAG = "PushupActivity"
         private const val CAMERA_PERMISSION_REQUEST_CODE = 1001
@@ -67,13 +71,14 @@ class PushupActivity : AppCompatActivity() {
         setContentView(R.layout.activity_pushup)
 
         previewView = findViewById(R.id.previewView)
-        pushupCountText = findViewById(R.id.pushupCountText) // Already there
+        pushupCountText = findViewById(R.id.pushupCountText)
         doneButton = findViewById(R.id.doneButton)
+        timeBankManager = TimeBankManager(applicationContext)
 
-        pushupCountText.text = "Push-ups: $pushupCount" // Initialize text
+        pushupCountText.text = "Push-ups: $pushupCount"
 
         cameraExecutor = Executors.newSingleThreadExecutor()
-        // cameraProviderFuture = ProcessCameraProvider.getInstance(this) // Already initialized
+        // cameraProviderFuture = ProcessCameraProvider.getInstance(this)
 
         // Initialize ML Kit Pose Detector
         initializePoseDetector()
@@ -84,6 +89,15 @@ class PushupActivity : AppCompatActivity() {
             ActivityCompat.requestPermissions(
                 this, REQUIRED_PERMISSIONS, CAMERA_PERMISSION_REQUEST_CODE
             )
+        }
+
+        // Make the Done button visible (it was GONE in XML)
+        // and set its OnClickListener
+        doneButton.visibility = View.VISIBLE // Make it visible
+        doneButton.setOnClickListener {
+            timeBankManager.addPushups(pushupCount)
+            Toast.makeText(this, "$pushupCount push-ups added! Total time: ${timeBankManager.getTimeSeconds() / 60} mins", Toast.LENGTH_LONG).show()
+            finish() // Close PushupActivity
         }
     }
 

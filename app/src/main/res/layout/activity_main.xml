@@ -26,4 +26,16 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
+    <!-- Inside your root layout in activity_main.xml, for example, a ConstraintLayout -->
+    <TextView
+        android:id="@+id/tempTimeDisplay"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Time Bank: 0m 0s"
+        android:textSize="18sp"
+        app:layout_constraintTop_toBottomOf="@id/tempLaunchPushupActivityButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="16dp"/>
+
 </androidx.constraintlayout.widget.ConstraintLayout>
