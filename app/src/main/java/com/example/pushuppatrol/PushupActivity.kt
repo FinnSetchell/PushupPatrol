@@ -18,6 +18,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.example.pushuppatrol.databinding.ActivityPushupBinding // Assuming ViewBinding
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.pose.PoseDetection
 import com.google.mlkit.vision.pose.PoseDetector
@@ -28,10 +29,14 @@ import java.util.concurrent.Executors
 
 class PushupActivity : AppCompatActivity() {
 
-    private lateinit var previewView: PreviewView
-    private lateinit var pushupCountText: TextView
-    private lateinit var doneButton: Button
-    private lateinit var blockedAppInfoText: TextView // To display which app was blocked
+    // Assuming you have ViewBinding setup for this activity
+    // If not, your findViewById calls are fine.
+    private lateinit var binding: ActivityPushupBinding
+
+    // private lateinit var previewView: PreviewView // Via binding
+    // private lateinit var pushupCountText: TextView // Via binding
+    // private lateinit var doneButton: Button // Via binding
+    // private lateinit var blockedAppInfoText: TextView // Via binding
 
     private lateinit var cameraExecutor: ExecutorService
     private var pushupCount = 0
@@ -40,48 +45,49 @@ class PushupActivity : AppCompatActivity() {
     }
     private var currentPushupState: PushupState = PushupState.UNKNOWN
     private var upReferenceY: Float = -1f
-    private val downThresholdFactor = 0.25f
-    private val upThresholdFactor = 0.15f
+    private val downThresholdFactor = 0.25f // Lower part of the push-up
+    private val upThresholdFactor = 0.15f   // Range to consider "up" from the lowest point
 
     private lateinit var poseDetector: PoseDetector
     private var isProcessingFrame = false
 
     private lateinit var timeBankManager: TimeBankManager
-    private var blockedAppNameExtra: String? = null // To store the package name passed via intent
+    private var blockedAppPackageNameExtra: String? = null // Renamed for clarity
 
     companion object {
         private const val TAG = "PushupActivity"
         private const val CAMERA_PERMISSION_REQUEST_CODE = 1001
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
-        // Ensure this matches what AppBlockerService uses to send the extra
-        const val EXTRA_BLOCKED_APP_NAME = "com.example.pushuppatrol.EXTRA_BLOCKED_APP_NAME"
+        // Ensure this matches what AppBlockerService (or InterstitialBlockActivity) uses
+        const val EXTRA_BLOCKED_APP_NAME = "com.example.pushuppatrol.EXTRA_BLOCKED_APP_NAME" // This is the package name
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_pushup) // Ensure this layout exists and has the views
+        // Assuming ViewBinding:
+        binding = ActivityPushupBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        previewView = findViewById(R.id.previewView)
-        pushupCountText = findViewById(R.id.tvPushupCount)
-        doneButton = findViewById(R.id.btnFinish)
-        blockedAppInfoText = findViewById(R.id.tvBlockedAppName) // Make sure you add this TextView to your activity_pushup.xml
+        // If not using ViewBinding, keep your findViewById calls:
+        // previewView = findViewById(R.id.previewView)
+        // pushupCountText = findViewById(R.id.tvPushupCount)
+        // doneButton = findViewById(R.id.btnFinish)
+        // blockedAppInfoText = findViewById(R.id.tvBlockedAppName)
 
         timeBankManager = TimeBankManager(applicationContext)
         cameraExecutor = Executors.newSingleThreadExecutor()
 
-        // Get the blocked app package name from the intent
-        blockedAppNameExtra = intent.getStringExtra(EXTRA_BLOCKED_APP_NAME)
-        Log.d(TAG, "PushupActivity started. App that ran out of time: $blockedAppNameExtra")
+        blockedAppPackageNameExtra = intent.getStringExtra(EXTRA_BLOCKED_APP_NAME)
+        Log.d(TAG, "PushupActivity started. Blocked app package: $blockedAppPackageNameExtra")
 
-        if (blockedAppNameExtra != null) {
-            // Try to get the user-friendly app name
-            val friendlyAppName = getAppNameFromPackage(blockedAppNameExtra!!)
-            blockedAppInfoText.text = "Time's up for: $friendlyAppName"
+        if (blockedAppPackageNameExtra != null) {
+            val friendlyAppName = getAppNameFromPackage(blockedAppPackageNameExtra!!)
+            binding.tvBlockedAppName.text = "Time's up for: $friendlyAppName" // Using binding
         } else {
-            blockedAppInfoText.text = "Time's up!" // Default message
+            binding.tvBlockedAppName.text = "Time's up!" // Using binding
         }
 
-        pushupCountText.text = "$pushupCount"
+        binding.tvPushupCount.text = "$pushupCount" // Using binding
         initializePoseDetector()
 
         if (allPermissionsGranted()) {
@@ -92,20 +98,26 @@ class PushupActivity : AppCompatActivity() {
             )
         }
 
-        doneButton.visibility = View.VISIBLE
-        doneButton.setOnClickListener {
-            // Original logic: add pushups to time bank and finish
-            // You might want to adjust how much time is added per session or per pushup later
-            timeBankManager.addPushups(pushupCount) // Assumes TimeBankManager.addPushups() exists
-            Toast.makeText(this, "$pushupCount push-ups added! Total time: ${timeBankManager.getTimeSeconds() / 60} mins", Toast.LENGTH_LONG).show()
+        binding.btnFinish.visibility = View.VISIBLE // Using binding
+        binding.btnFinish.setOnClickListener {
+            val secondsPerPushup = 10 // Example: Or load from settings later
+            val timeEarned = pushupCount * secondsPerPushup
+            timeBankManager.addTimeSeconds(timeEarned) // Use addTimeSeconds
 
-            // If a specific app was blocked, you might want to send a broadcast or signal
-            // that time has been earned for it, so AppBlockerService can allow access again.
-            // For now, just finishing and the user can try reopening.
+            Toast.makeText(
+                this,
+                "$pushupCount push-ups added! $timeEarned seconds earned. Total: ${timeBankManager.getTimeSeconds() / 60} mins",
+                Toast.LENGTH_LONG
+            ).show()
+
+            // If an app was specifically blocked, finishing this activity should allow the user
+            // to return to it (or the system to bring it to foreground if it was the last task).
+            // AppBlockerService will re-evaluate on next foreground event.
             finish()
         }
     }
 
+    // Helper function to get user-friendly application name from package name
     private fun getAppNameFromPackage(packageName: String): String {
         return try {
             val packageManager = applicationContext.packageManager
@@ -134,20 +146,20 @@ class PushupActivity : AppCompatActivity() {
         cameraProviderFuture.addListener({
             val cameraProvider = cameraProviderFuture.get()
             val preview = Preview.Builder().build().also {
-                it.setSurfaceProvider(previewView.surfaceProvider)
+                it.setSurfaceProvider(binding.previewView.surfaceProvider) // Using binding
             }
             val imageAnalysis = ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
 
-            imageAnalysis.setAnalyzer(cameraExecutor, ImageAnalysis.Analyzer { imageProxy ->
+            imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
                 if (isProcessingFrame) {
                     imageProxy.close()
-                    return@Analyzer
+                    return@setAnalyzer
                 }
                 isProcessingFrame = true
                 processImageProxy(imageProxy)
-            })
+            }
 
             val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
             try {
@@ -155,6 +167,7 @@ class PushupActivity : AppCompatActivity() {
                 cameraProvider.bindToLifecycle(
                     this, cameraSelector, preview, imageAnalysis
                 )
+                Log.d(TAG, "Camera bound to lifecycle")
             } catch (exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
             }
@@ -175,28 +188,43 @@ class PushupActivity : AppCompatActivity() {
 
                         if (nose != null && leftShoulder != null && rightShoulder != null) {
                             val shoulderY = (leftShoulder.position.y + rightShoulder.position.y) / 2f
+                            // Using shoulderY as the primary vertical reference for push-up state
                             val currentY = shoulderY
 
-                            if (previewView.height == 0) {
+                            // Ensure previewView has been laid out and has a height
+                            if (binding.previewView.height == 0) {
                                 imageProxy.close()
                                 isProcessingFrame = false
                                 return@addOnSuccessListener
                             }
 
+                            // Dynamic Up Reference Initialization/Adjustment
+                            // Initialize upReferenceY or adjust if a higher "up" position is detected.
+                            // This helps if the initial pose is already somewhat down.
                             if (upReferenceY == -1f || currentY < upReferenceY) {
+                                // Only adjust upReferenceY if not in DOWN state or significantly higher than current up ref
+                                // This prevents minor fluctuations while in UP state from wrongly setting a lower upReference.
                                 if (currentPushupState != PushupState.DOWN || currentY < upReferenceY * (1 - upThresholdFactor * 0.5f) ) {
                                     upReferenceY = currentY
+                                    // Log.d(TAG, "New UP reference Y: $upReferenceY")
                                 }
                             }
 
-                            val movementRange = previewView.height * 0.3
+                            // Define thresholds based on a percentage of the previewView height as movement range
+                            // This makes it somewhat adaptive to how close the person is.
+                            // Consider a fixed pixel range if percentage is too variable.
+                            val movementRange = binding.previewView.height * 0.3f // Assume push-up movement is roughly 30% of view height
                             val downThreshold = upReferenceY + (movementRange * downThresholdFactor)
                             val upThreshold = upReferenceY + (movementRange * (downThresholdFactor - upThresholdFactor))
+
+                            // Log.d(TAG, "currentY: $currentY, upRef: $upReferenceY, downThresh: $downThreshold, upThresh: $upThreshold, State: $currentPushupState")
+
 
                             when (currentPushupState) {
                                 PushupState.UNKNOWN, PushupState.UP -> {
                                     if (currentY > downThreshold) {
                                         currentPushupState = PushupState.DOWN
+                                        Log.i(TAG, "STATE CHANGE: -> DOWN (currentY: $currentY > downThreshold: $downThreshold)")
                                     }
                                 }
                                 PushupState.DOWN -> {
@@ -204,24 +232,31 @@ class PushupActivity : AppCompatActivity() {
                                         currentPushupState = PushupState.UP
                                         pushupCount++
                                         runOnUiThread {
-                                            pushupCountText.text = "$pushupCount"
+                                            binding.tvPushupCount.text = "$pushupCount"
                                         }
+                                        Log.i(TAG, "STATE CHANGE: -> UP (PUSH-UP COUNTED: $pushupCount) (currentY: $currentY < upThreshold: $upThreshold)")
+                                        // Update upReferenceY to the new "up" position after completing a rep
+                                        // This helps recalibrate if the user shifts slightly.
                                         upReferenceY = currentY
                                     }
                                 }
                             }
                         } else {
+                            // Landmarks missing, reset state
+                            // Log.d(TAG, "Landmarks missing (nose or shoulders)")
                             currentPushupState = PushupState.UNKNOWN
-                            upReferenceY = -1f
+                            upReferenceY = -1f // Reset reference if landmarks are lost
                         }
                     } else {
+                        // No pose detected or no landmarks
+                        // Log.d(TAG, "No pose or landmarks detected.")
                         currentPushupState = PushupState.UNKNOWN
-                        upReferenceY = -1f
+                        upReferenceY = -1f // Reset reference
                     }
                 }
                 .addOnFailureListener { e ->
                     Log.e(TAG, "Pose detection failed", e)
-                    currentPushupState = PushupState.UNKNOWN
+                    currentPushupState = PushupState.UNKNOWN // Reset on failure
                     upReferenceY = -1f
                 }
                 .addOnCompleteListener {
@@ -229,10 +264,11 @@ class PushupActivity : AppCompatActivity() {
                     isProcessingFrame = false
                 }
         } else {
-            imageProxy.close()
+            imageProxy.close() // Close if mediaImage is null
             isProcessingFrame = false
         }
     }
+
 
     override fun onRequestPermissionsResult(
         requestCode: Int, permissions: Array<String>, grantResults: IntArray
@@ -248,10 +284,12 @@ class PushupActivity : AppCompatActivity() {
         }
     }
 
-    // Optional: Prevent back press from easily dismissing the activity if time is up.
     override fun onBackPressed() {
-        // super.onBackPressed() // Comment out to disable back button
-        Toast.makeText(this, "Please complete your push-ups to earn more time.", Toast.LENGTH_SHORT).show()
+        // Consider if user should be able to easily back out if they were forced here.
+        // For now, allow back press.
+        super.onBackPressed()
+        // Or show a toast:
+        // Toast.makeText(this, "Complete push-ups or use the done button.", Toast.LENGTH_SHORT).show()
     }
 
     override fun onDestroy() {
@@ -260,5 +298,6 @@ class PushupActivity : AppCompatActivity() {
         if (::poseDetector.isInitialized) {
             poseDetector.close()
         }
+        Log.d(TAG, "PushupActivity destroyed.")
     }
 }

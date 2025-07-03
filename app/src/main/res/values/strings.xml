@@ -5,4 +5,21 @@
         when selected apps are opened, so it can block them if your earned time has run out. This
         helps you stay focused by requiring push-ups to regain access.
     </string>
+    <!-- ... other strings ... -->
+    <string name="interstitial_title_placeholder">Time\'s Up for %s!</string>
+    <string name="interstitial_message_time_up">You\'ve run out of time for this app. You can use
+        your daily grace period or earn more time.
+    </string>
+    <string name="interstitial_button_use_grace_period">Use Daily Bonus (30s)</string>
+    <string name="interstitial_button_earn_time">Earn More Time</string>
+    <string name="grace_period_activated_toast">Bonus activated for 30 seconds!</string>
+    <string name="grace_period_unavailable_toast">Daily bonus already used.</string>
+    <string name="blocked_app_icon_description">Blocked App Icon</string>
+    <string name="grace_period_available_info">Daily bonus available</string>
+    <string name="grace_period_used_info">Daily bonus used for today</string>
+    <string name="interstitial_button_take_break">Take a Break</string>
+    <!-- ... other strings ... -->
+    <string name="interstitial_button_get_grace_time">Get %1$ds Bonus Time</string>
+    <string name="interstitial_button_get_grace_time_used">Daily %1$ds Bonus Used</string>
+    <string name="grace_time_awarded_toast">%1$ds bonus time added to your bank!</string>
 </resources>

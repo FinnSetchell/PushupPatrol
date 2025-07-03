@@ -18,68 +18,63 @@ import kotlin.io.path.name
 class AppBlockerService : AccessibilityService(), TimeExpirationListener {
 
     private lateinit var timeBankManager: TimeBankManager
-    private var lastStartedAppPackage: String? = null
-    private var lastStartTimeMillis: Long = 0
-    private val startDebounceMillis = 500 // 0.5 seconds debounce window
+    private lateinit var gracePeriodManager: GracePeriodManager
+    private lateinit var sharedPreferences: SharedPreferences // For loading locked app list
 
-    // This will now be loaded from SharedPreferences
-    private var lockedAppPackages: Set<String> = emptySet() // Changed from val to var, and initialized empty
-    private lateinit var sharedPreferences: SharedPreferences // Added
+    private var lockedAppPackages: Set<String> = emptySet()
+    private var currentForegroundApp: String? = null
+
+    // To prevent rapid re-starting of TimerService for the same app
+    private var lastTimerStartedForPackage: String? = null
+    private var lastTimerStartTimeMillis: Long = 0
+    private val timerStartDebounceMillis = 500 // 0.5 seconds
 
     companion object {
         private const val TAG = "AppBlockerService"
-        // These MUST match the constants in AppSelectionActivity
-        const val PREFS_NAME = "AppBlockerPrefs" // Use AppSelectionActivity.PREFS_NAME if it's public there
-        const val KEY_LOCKED_APPS = "locked_app_packages" // Use AppSelectionActivity.KEY_LOCKED_APPS if public
-        const val ACTION_LOCKED_APPS_UPDATED = "com.example.pushuppatrol.LOCKED_APPS_UPDATED" // Added
+
+        // Constants for SharedPreferences and Broadcasts (ensure they match AppSelectionActivity)
+        // It's good practice to have these in a shared constants file or object.
+        const val PREFS_NAME = "AppBlockerPrefs" // Or AppSelectionActivity.PREFS_NAME
+        const val KEY_LOCKED_APPS = "locked_app_packages" // Or AppSelectionActivity.KEY_LOCKED_APPS
+        const val ACTION_LOCKED_APPS_UPDATED = "com.example.pushuppatrol.LOCKED_APPS_UPDATED"
     }
 
-    private var currentForegroundApp: String? = null
-
-    // BroadcastReceiver for when the timer expires
+    // --- Broadcast Receivers ---
     private val timeExpiredReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            Log.d(TAG, "timeExpiredReceiver: onReceive - Action: ${intent.action}")
             if (intent.action == TimerService.BROADCAST_TIME_EXPIRED) {
                 val expiredAppPackage = intent.getStringExtra(TimerService.EXTRA_APP_PACKAGE)
-                Log.i(TAG, "Time expired broadcast received for app: $expiredAppPackage. Current foreground app: $currentForegroundApp")
+                Log.i(TAG, "Time expired broadcast received for app: $expiredAppPackage.")
                 handleTimeExpirationLogic(expiredAppPackage)
             }
         }
     }
 
-    // BroadcastReceiver for when the list of locked apps is updated by AppSelectionActivity
     private val lockedAppsUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == ACTION_LOCKED_APPS_UPDATED) {
-                Log.d(TAG, "Received LOCKED_APPS_UPDATED broadcast. Reloading list.")
+                Log.d(TAG, "LOCKED_APPS_UPDATED broadcast received. Reloading list.")
                 loadLockedAppsList()
             }
         }
     }
 
+    // --- Lifecycle Methods ---
     override fun onCreate() {
         super.onCreate()
-        Log.d(TAG, "AppBlockerService: onCreate")
-        sharedPreferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) // Initialize SharedPreferences
+        Log.d(TAG, "onCreate: Service is being created.")
+        sharedPreferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         timeBankManager = TimeBankManager(applicationContext)
-        loadLockedAppsList() // Load the list initially
-        Log.d(TAG, "AppBlockerService created. Monitoring apps: $lockedAppPackages")
+
+        loadLockedAppsList()
+        Log.d(TAG, "Initial locked apps: $lockedAppPackages")
 
         AppBlockerEventManager.setTimeExpirationListener(this)
 
-        // Register the locked apps update receiver
-        val updateFilter = IntentFilter(ACTION_LOCKED_APPS_UPDATED)
-        registerReceiver(lockedAppsUpdateReceiver, updateFilter, Context.RECEIVER_NOT_EXPORTED)
-
-
-        // Register time expired receiver (if you decide to keep it alongside TimeExpirationListener)
-        // Consider if this is still needed if TimeExpirationListener covers all cases.
-        // For now, let's assume it might still be useful or a fallback.
-        val timeExpiredFilter = IntentFilter(TimerService.BROADCAST_TIME_EXPIRED)
-        registerReceiver(timeExpiredReceiver, timeExpiredFilter, Context.RECEIVER_NOT_EXPORTED)
-
-        Log.d(TAG, "Receivers registered.")
+        // Register broadcast receivers
+        registerReceiver(lockedAppsUpdateReceiver, IntentFilter(ACTION_LOCKED_APPS_UPDATED), Context.RECEIVER_NOT_EXPORTED)
+        registerReceiver(timeExpiredReceiver, IntentFilter(TimerService.BROADCAST_TIME_EXPIRED), Context.RECEIVER_NOT_EXPORTED)
+        Log.d(TAG, "Broadcast receivers registered.")
     }
 
     override fun onServiceConnected() {
@@ -87,127 +82,189 @@ class AppBlockerService : AccessibilityService(), TimeExpirationListener {
         val serviceInfo = AccessibilityServiceInfo().apply {
             eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or AccessibilityEvent.TYPE_WINDOWS_CHANGED
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
-            notificationTimeout = 100
+            notificationTimeout = 100 // How long to wait for events before considering them consecutive.
             flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS or
                     AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
-            // Consider setting packageNames here if the list doesn't change frequently
-            // and you want to optimize. However, with dynamic list, it's simpler to filter manually.
+            // packageNames can be set here if the list is static, but dynamic loading is fine.
         }
         setServiceInfo(serviceInfo)
-        Log.i(TAG, "AppBlockerService connected and configured.")
-        // Reload in case the list changed while the service was connected but not fully configured
-        loadLockedAppsList()
+        Log.i(TAG, "onServiceConnected: Service connected and configured.")
+        loadLockedAppsList() // Reload in case list changed while service was off
         Toast.makeText(this, "Push-up Patrol Blocker Active", Toast.LENGTH_SHORT).show()
     }
 
-    private fun loadLockedAppsList() {
-        lockedAppPackages = sharedPreferences.getStringSet(KEY_LOCKED_APPS, emptySet()) ?: emptySet()
-        Log.i(TAG, "Locked apps list reloaded: $lockedAppPackages")
+    override fun onInterrupt() {
+        Log.w(TAG, "onInterrupt: Service interrupted.")
+        AppBlockerEventManager.setTimeExpirationListener(null)
     }
 
-    // From your original TimeExpirationListener
-    override fun onTimeExpired(expiredAppPackage: String?) {
-        Log.i(TAG, "onTimeExpired (via Listener) for app: $expiredAppPackage. Current foreground app: $currentForegroundApp")
-        handleTimeExpirationLogic(expiredAppPackage)
+    override fun onDestroy() {
+        super.onDestroy()
+        Log.w(TAG, "onDestroy: Service is being destroyed.")
+        AppBlockerEventManager.setTimeExpirationListener(null)
+        unregisterReceiver(lockedAppsUpdateReceiver)
+        unregisterReceiver(timeExpiredReceiver)
+        Log.d(TAG, "Broadcast receivers unregistered.")
     }
 
-    // Centralized logic for handling time expiration from either source
-    private fun handleTimeExpirationLogic(expiredAppPackage: String?) {
-        if (currentForegroundApp != null && lockedAppPackages.contains(currentForegroundApp)) {
-            // Check if the expired app is the one currently in foreground
-            if (expiredAppPackage == currentForegroundApp) {
-                val currentActivityName = getForegroundActivityClassName() // This might still return null
-                val isOurOwnPushupOrMain = currentForegroundApp == applicationContext.packageName &&
-                        (currentActivityName == PushupActivity::class.java.name ||
-                                currentActivityName == MainActivity::class.java.name ||
-                                classNameIsOurApp(currentActivityName)) // Broader check for our own app
-
-                if (!isOurOwnPushupOrMain) {
-                    Log.i(TAG, "$currentForegroundApp is a locked app and is still in the foreground after time expired. Re-locking.")
-                    launchPushupActivity(currentForegroundApp)
-                } else {
-                    Log.d(TAG, "Time expired for $currentForegroundApp, but our own app activity ($currentActivityName) is foreground. No re-lock.")
-                }
-            } else {
-                // Time expired for an app, but a different app is now in the foreground.
-                // If this *different* app is also a locked app, it should have its own timer or be blocked.
-                // This scenario means the user switched away before the timer for expiredAppPackage visually hit zero
-                // or the broadcast was delayed.
-                Log.w(TAG, "Time expired for $expiredAppPackage, but $currentForegroundApp is now in foreground. No re-lock for $expiredAppPackage. $currentForegroundApp will be handled by onAccessibilityEvent.")
-            }
-        } else {
-            Log.i(TAG, "Time expired for $expiredAppPackage, but a locked app is no longer in the foreground ($currentForegroundApp). No re-lock action taken for $expiredAppPackage.")
-        }
-    }
-
-
+    // --- Core Logic ---
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
 
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
             event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
 
-            val packageName = event.packageName?.toString()
-            val className = event.className?.toString() // className can be null
+            val packageName = event.packageName?.toString() ?: return // Ignore if no package name
+            val className = event.className?.toString()
 
-            // Log.d(TAG, "Event: type=${AccessibilityEvent.eventTypeToString(event.eventType)}, pkg=$packageName, class=$className")
-
-            if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && packageName != null) {
-                if (currentForegroundApp != packageName) {
-                    Log.d(TAG, "Foreground app changed from $currentForegroundApp to $packageName (class: $className)")
-                }
+            // Update current foreground app
+            if (currentForegroundApp != packageName && event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+                Log.d(TAG, "Foreground app changed: $currentForegroundApp -> $packageName (Class: $className)")
                 currentForegroundApp = packageName
+            } else if (currentForegroundApp == null && event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+                currentForegroundApp = packageName // Initial foreground app
             }
 
-            if (packageName != null) {
-                // Avoid blocking our own app's activities or the launcher
-                if (packageName == applicationContext.packageName || isLauncher(packageName)) {
-                    // If our app is in foreground (but not PushupActivity), stop the timer for other apps.
-                    if (packageName == applicationContext.packageName && className != PushupActivity::class.java.name) {
-                        //Log.d(TAG, "Our own app ($className) is in foreground (not PushupActivity). Stopping timer.")
-                        //stopTimerServiceIfNeeded() // More generic stop
-                    }
-                    // Log.d(TAG, "Event for our own app or launcher ($packageName). No blocking action.")
-                    return // No further processing for our app or launcher
-                }
 
-
-                // Scenario 1: A locked app is in the foreground
-                if (lockedAppPackages.contains(packageName)) {
-                    val remainingTimeSeconds = timeBankManager.getTimeSeconds()
-                    Log.d(TAG, "Locked app detected: $packageName. Time remaining: $remainingTimeSeconds seconds.")
-
-                    if (remainingTimeSeconds <= 0) {
-                        Log.i(TAG, "Time is up for $packageName. Launching PushupActivity.")
-                        stopTimerServiceIfNeeded() // Stop timer before launching pushup activity
-                        launchPushupActivity(packageName)
-                    } else {
-                        // Time is available. Start the TimerService if it's not already running for this app.
-                        val currentTimeMillis = System.currentTimeMillis()
-                        if (packageName == lastStartedAppPackage && (currentTimeMillis - lastStartTimeMillis) < startDebounceMillis) {
-                            // Log.d(TAG, "Debouncing ACTION_START_TIMER for $packageName, recently started.")
-                        } else {
-                            Log.d(TAG, "$packageName is a locked app, time available. Ensuring TimerService is running.")
-                            startTimerService(packageName)
-                            lastStartedAppPackage = packageName
-                            lastStartTimeMillis = currentTimeMillis
-                        }
+            // Ignore events from own app or launcher to prevent self-blocking loops
+            if (packageName == applicationContext.packageName || isLauncher(packageName)) {
+                // If it's our own app (but not PushupActivity or Interstitial), ensure any active timer for other apps is stopped.
+                if (packageName == applicationContext.packageName &&
+                    className != PushupActivity::class.java.name /* && className != InterstitialBlockActivity::class.java.name */) { // Add Interstitial when created
+                    // Consider stopping timer only if the previously timed app is different from our app
+                    if (lastTimerStartedForPackage != null && lastTimerStartedForPackage != applicationContext.packageName) {
+                        Log.d(TAG, "Our app ($className) is in foreground. Stopping timer if it was running for $lastTimerStartedForPackage.")
+                        stopTimerServiceForActiveApp()
                     }
                 }
-                // Scenario 2: A non-locked app is in the foreground
-                else {
-                    // This app is not in our lockedAppPackages list.
-                    Log.d(TAG, "Non-locked app ($packageName) in foreground. Stopping timer.")
-                    stopTimerServiceIfNeeded()
-                    lastStartedAppPackage = null // Clear last started app
-                }
+                return
             }
+
+            // Handle the foreground app
+            handleAppInForeground(packageName)
         }
     }
 
-    // Helper to check if a class name belongs to our app
-    private fun classNameIsOurApp(className: String?): Boolean {
-        return className != null && className.startsWith(applicationContext.packageName)
+    private fun handleAppInForeground(packageName: String) {
+        if (lockedAppPackages.contains(packageName)) {
+            // --- This is a LOCKED APP ---
+            Log.d(TAG, "Locked app detected in foreground: $packageName")
+
+            // Check Time Bank
+            val remainingTimeSeconds = timeBankManager.getTimeSeconds()
+            Log.d(TAG, "Time available: $remainingTimeSeconds seconds for $packageName")
+
+            if (remainingTimeSeconds <= 0) {
+                // Time is up. Launch the Interstitial Blocker.
+                Log.i(TAG, "Time is zero for $packageName. Launching InterstitialBlockActivity.")
+                stopTimerServiceForActiveApp() // Ensure timer is stopped before blocking
+                launchInterstitialBlockActivity(packageName) // MODIFIED HERE
+            } else {
+                // Time available. Start/ensure TimerService is running for this app.
+                Log.d(TAG, "Time available for $packageName. Ensuring TimerService is running.")
+                startTimerServiceIfNeeded(packageName)
+            }
+        } else {
+            // --- This is a NON-LOCKED APP ---
+            Log.d(TAG, "Non-locked app in foreground: $packageName. Stopping timer if it was for a locked app.")
+            stopTimerServiceForActiveApp() // Stop timer if a non-locked app comes to foreground
+        }
+    }
+
+
+    // --- TimeExpirationListener Implementation ---
+    override fun onTimeExpired(expiredAppPackage: String?) {
+        Log.i(TAG, "onTimeExpired (Listener): App: $expiredAppPackage. Current FG: $currentForegroundApp")
+        handleTimeExpirationLogic(expiredAppPackage)
+    }
+
+    private fun handleTimeExpirationLogic(expiredAppPackage: String?) {
+        if (currentForegroundApp != null &&
+            lockedAppPackages.contains(currentForegroundApp!!) &&
+            expiredAppPackage == currentForegroundApp) {
+
+            val currentActivityName = getForegroundActivityClassName()
+            val isOurOwnUtilityActivity = currentForegroundApp == applicationContext.packageName &&
+                    (currentActivityName == PushupActivity::class.java.name ||
+                            currentActivityName == MainActivity::class.java.name ||
+                            currentActivityName == InterstitialBlockActivity::class.java.name || // Add Interstitial
+                            classNameIsOurApp(currentActivityName))
+
+            if (!isOurOwnUtilityActivity) {
+                Log.i(TAG, "$currentForegroundApp (locked) is still foreground after time expired. Re-locking.")
+                launchInterstitialBlockActivity(currentForegroundApp) // MODIFIED HERE
+            } else {
+                Log.d(TAG, "Time expired for $currentForegroundApp, but our own activity ($currentActivityName) is foreground. No re-lock.")
+            }
+        } else {
+            Log.i(TAG, "Time expired for $expiredAppPackage, but conditions for re-lock not met (current FG: $currentForegroundApp).")
+        }
+    }
+
+    // --- Helper Methods ---
+    private fun loadLockedAppsList() {
+        lockedAppPackages = sharedPreferences.getStringSet(KEY_LOCKED_APPS, emptySet()) ?: emptySet()
+        Log.i(TAG, "Locked apps list reloaded: $lockedAppPackages")
+    }
+
+    private fun startTimerServiceIfNeeded(appPackage: String) {
+        val currentTimeMillis = System.currentTimeMillis()
+        // Debounce: If TimerService was just started for this app, don't restart it immediately
+        if (appPackage == lastTimerStartedForPackage && (currentTimeMillis - lastTimerStartTimeMillis) < timerStartDebounceMillis) {
+            Log.d(TAG, "Debouncing startTimerService for $appPackage (recently started).")
+            return
+        }
+
+        Log.d(TAG, "Starting TimerService for $appPackage.")
+        val serviceIntent = Intent(this, TimerService::class.java).apply {
+            action = TimerService.ACTION_START_TIMER
+            putExtra(TimerService.EXTRA_APP_PACKAGE, appPackage)
+            // TimerService will get duration from TimeBankManager itself now
+        }
+        ContextCompat.startForegroundService(this, serviceIntent)
+        lastTimerStartedForPackage = appPackage
+        lastTimerStartTimeMillis = currentTimeMillis
+    }
+
+    private fun stopTimerServiceForActiveApp() {
+        // Only stop if a timer was potentially running
+        if (lastTimerStartedForPackage != null) {
+            Log.d(TAG, "Stopping TimerService (was running for $lastTimerStartedForPackage).")
+            val stopIntent = Intent(this, TimerService::class.java).apply {
+                action = TimerService.ACTION_STOP_TIMER
+                // Optionally pass the package name if TimerService needs to know which timer instance to stop
+                // putExtra(TimerService.EXTRA_APP_PACKAGE, lastTimerStartedForPackage)
+            }
+            ContextCompat.startForegroundService(this, stopIntent) // Or just stopService(stopIntent) if not always FG
+            lastTimerStartedForPackage = null // Clear the record
+        }
+    }
+
+    // TODO: In Sub-Goal 4.1.2, create this method
+    // private fun launchInterstitialBlockActivity(lockedAppPackage: String?) {
+    //     Log.i(TAG, "Launching InterstitialBlockActivity for $lockedAppPackage.")
+    //     val intent = Intent(this, InterstitialBlockActivity::class.java).apply {
+    //         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+    //         putExtra(InterstitialBlockActivity.EXTRA_BLOCKED_APP_PACKAGE, lockedAppPackage)
+    //     }
+    //     startActivity(intent)
+    // }
+
+    private fun launchInterstitialBlockActivity(lockedAppPackage: String?) {
+        if (lockedAppPackage == null) {
+            Log.w(TAG, "Attempted to launch InterstitialBlockActivity with null package name.")
+            return
+        }
+        Log.i(TAG, "Launching InterstitialBlockActivity for $lockedAppPackage.")
+        val intent = Intent(this, InterstitialBlockActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
+            putExtra(InterstitialBlockActivity.EXTRA_BLOCKED_APP_PACKAGE_NAME, lockedAppPackage)
+            // Optionally, get and pass the display name here if easily available,
+            // otherwise InterstitialBlockActivity can derive it.
+            // val appName = getAppNameFromPackage(lockedAppPackage) // You'd need a helper for this in service
+            // putExtra(InterstitialBlockActivity.EXTRA_BLOCKED_APP_DISPLAY_NAME, appName)
+        }
+        startActivity(intent)
     }
 
     private fun isLauncher(packageName: String): Boolean {
@@ -221,60 +278,15 @@ class AppBlockerService : AccessibilityService(), TimeExpirationListener {
         return resolveInfo?.activityInfo?.packageName == packageName
     }
 
-    private fun stopTimerServiceIfNeeded() {
-        // Only stop if a timer was potentially running for a locked app
-        // This check helps prevent unnecessary calls if no locked app was active
-        if (lastStartedAppPackage != null) {
-            Log.d(TAG, "Stopping TimerService (was potentially running for $lastStartedAppPackage).")
-            val stopIntent = Intent(this, TimerService::class.java).apply {
-                action = TimerService.ACTION_STOP_TIMER
-            }
-            ContextCompat.startForegroundService(this, stopIntent)
-            lastStartedAppPackage = null // Clear the record of which app's timer was running
-        }
-    }
-
-
-    override fun onInterrupt() {
-        Log.w(TAG, "AppBlockerService interrupted.")
-        AppBlockerEventManager.setTimeExpirationListener(null) // Unregister if AppBlockerEventManager exists
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        Log.w(TAG, "AppBlockerService destroyed.")
-        AppBlockerEventManager.setTimeExpirationListener(null) // Unregister if AppBlockerEventManager exists
-        unregisterReceiver(lockedAppsUpdateReceiver)
-        unregisterReceiver(timeExpiredReceiver) // Also unregister this one
-        Log.d(TAG, "Receivers unregistered.")
-    }
-
-    private fun startTimerService(appPackage: String) {
-        // Log.d(TAG, "$appPackage is a locked app, time available. Ensuring TimerService is running.")
-        val serviceIntent = Intent(this, TimerService::class.java).apply {
-            action = TimerService.ACTION_START_TIMER
-            putExtra(TimerService.EXTRA_APP_PACKAGE, appPackage)
-        }
-        ContextCompat.startForegroundService(this, serviceIntent)
-    }
-
-    private fun launchPushupActivity(lockedAppPackage: String?) {
-        Log.i(TAG, "Launching PushupActivity for $lockedAppPackage.")
-        val intent = Intent(this, PushupActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            if (lockedAppPackage != null) {
-                // Ensure this key matches what PushupActivity expects
-                putExtra(PushupActivity.EXTRA_BLOCKED_APP_NAME, lockedAppPackage)
-            }
-        }
-        startActivity(intent)
+    private fun classNameIsOurApp(className: String?): Boolean {
+        return className != null && className.startsWith(applicationContext.packageName)
     }
 
     private fun getForegroundActivityClassName(): String? {
-        // This is inherently difficult and unreliable from an AccessibilityService
-        // especially across different Android versions and OEM customizations.
+        // This is inherently difficult from an AccessibilityService.
         // The event.className is the best source when available.
-        // For your logic, primarily rely on event.packageName and currentForegroundApp.
-        return null
+        // For current logic, primarily relying on event.packageName.
+        // If specific activity checks are needed, it's better if they come directly from event.className
+        return null // Returning null as a reliable general method is not feasible.
     }
 }
