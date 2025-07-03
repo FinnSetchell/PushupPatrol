@@ -225,18 +225,16 @@ class TimerService : Service() {
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val serviceChannel = NotificationChannel(
-                NOTIFICATION_CHANNEL_ID,
-                "Timer Service Channel",
-                NotificationManager.IMPORTANCE_LOW
-            )
-            serviceChannel.setSound(null, null)
-            serviceChannel.enableVibration(false)
+        val serviceChannel = NotificationChannel(
+            NOTIFICATION_CHANNEL_ID,
+            "Timer Service Channel",
+            NotificationManager.IMPORTANCE_LOW
+        )
+        serviceChannel.setSound(null, null)
+        serviceChannel.enableVibration(false)
 
-            val manager = getSystemService(NotificationManager::class.java)
-            manager?.createNotificationChannel(serviceChannel)
-        }
+        val manager = getSystemService(NotificationManager::class.java)
+        manager?.createNotificationChannel(serviceChannel)
     }
 
     private fun updateNotification(contentText: String, appName: String? = null) { // appName is optional for simpler calls

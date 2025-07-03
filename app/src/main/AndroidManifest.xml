@@ -24,7 +24,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.PushupPatrol"
-        tools:targetApi="31">
+        tools:targetApi="31"
+        android:name=".MainApplication">
+
         <activity
             android:name=".InterstitialBlockActivity"
             android:excludeFromRecents="true"
