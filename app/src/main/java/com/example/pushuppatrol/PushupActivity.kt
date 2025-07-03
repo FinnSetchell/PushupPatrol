@@ -62,9 +62,9 @@ class PushupActivity : AppCompatActivity() {
         setContentView(R.layout.activity_pushup) // Ensure this layout exists and has the views
 
         previewView = findViewById(R.id.previewView)
-        pushupCountText = findViewById(R.id.pushupCountText)
-        doneButton = findViewById(R.id.doneButton)
-        blockedAppInfoText = findViewById(R.id.blockedAppInfoText) // Make sure you add this TextView to your activity_pushup.xml
+        pushupCountText = findViewById(R.id.tvPushupCount)
+        doneButton = findViewById(R.id.btnFinish)
+        blockedAppInfoText = findViewById(R.id.tvBlockedAppName) // Make sure you add this TextView to your activity_pushup.xml
 
         timeBankManager = TimeBankManager(applicationContext)
         cameraExecutor = Executors.newSingleThreadExecutor()
@@ -81,7 +81,7 @@ class PushupActivity : AppCompatActivity() {
             blockedAppInfoText.text = "Time's up!" // Default message
         }
 
-        pushupCountText.text = "Push-ups: $pushupCount"
+        pushupCountText.text = "$pushupCount"
         initializePoseDetector()
 
         if (allPermissionsGranted()) {
@@ -204,7 +204,7 @@ class PushupActivity : AppCompatActivity() {
                                         currentPushupState = PushupState.UP
                                         pushupCount++
                                         runOnUiThread {
-                                            pushupCountText.text = "Push-ups: $pushupCount"
+                                            pushupCountText.text = "$pushupCount"
                                         }
                                         upReferenceY = currentY
                                     }

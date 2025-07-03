@@ -3,14 +3,13 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.example.pushuppatrol">
 
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
     <queries>
         <package android:name="com.instagram.android" />
         <package android:name="com.google.android.youtube" />
     </queries>
 
-    <uses-feature android:name="android.hardware.camera.any" />
-
-    <!-- Permissions declared ONCE here -->
+    <uses-feature android:name="android.hardware.camera.any" /> <!-- Permissions declared ONCE here -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -26,40 +25,40 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.PushupPatrol"
         tools:targetApi="31">
-
         <activity
-            android:exported="true"
-            android:name=".MainActivity">
+            android:name=".AppSelectionActivity"
+            android:exported="false" />
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
         <activity
-            android:exported="false"
-            android:name=".PushupActivity" />
+            android:name=".PushupActivity"
+            android:exported="false" />
 
         <service
+            android:name=".AppBlockerService"
             android:exported="true"
             android:label="@string/accessibility_service_label"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
-            android:name=".AppBlockerService">
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
+
             <meta-data
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
-        </service>
-
-        <!-- SINGLE, CORRECT declaration for TimerService -->
+        </service> <!-- SINGLE, CORRECT declaration for TimerService -->
         <service
+            android:name=".TimerService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="dataSync"
-            android:name=".TimerService">
-        </service>
-
+            android:foregroundServiceType="dataSync"></service>
     </application>
 
 </manifest>
