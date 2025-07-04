@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".SettingsActivity">
+    tools:context=".ui.settings.SettingsActivity">
 
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appBarLayoutSettings"
@@ -82,13 +82,72 @@
         app:layout_constraintStart_toStartOf="@+id/tilSecondsPerPushup"
         app:layout_constraintTop_toBottomOf="@id/tvLabelActivityType" />
 
+    <!-- Daily Bonus Settings Title/Header (Optional but good for grouping) -->
+    <TextView
+        android:id="@+id/tvDailyBonusSettingsLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/settings_section_daily_bonus_title"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toBottomOf="@+id/spinnerActivityType"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="24dp"
+        android:layout_marginStart="16dp"/>
+
+    <!-- Enable/Disable Daily Bonus Switch -->
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/switchEnableDailyBonus"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/settings_enable_daily_bonus_label"
+        android:textSize="16sp"
+        app:layout_constraintTop_toBottomOf="@+id/tvDailyBonusSettingsLabel"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="16dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:minHeight="48dp"/>
+
+    <!-- Label for Daily Bonus Amount Spinner -->
+    <TextView
+        android:id="@+id/tvDailyBonusAmountLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/settings_daily_bonus_amount_label"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toBottomOf="@+id/switchEnableDailyBonus"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="24dp"
+        android:layout_marginStart="16dp"/>
+
+    <!-- Spinner for Daily Bonus Amount -->
+    <Spinner
+        android:id="@+id/spinnerDailyBonusAmount"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:minHeight="48dp"
+        app:layout_constraintTop_toBottomOf="@+id/tvDailyBonusAmountLabel"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="8dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"/>
+
+    <!-- Adjust the top constraint of your btnSaveChanges -->
     <Button
         android:id="@+id/btnSaveChanges"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
         android:text="@string/btn_save_changes"
-        app:layout_constraintEnd_toEndOf="@+id/tilSecondsPerPushup"
-        app:layout_constraintTop_toBottomOf="@+id/spinnerActivityType" />
+        app:layout_constraintTop_toBottomOf="@+id/spinnerDailyBonusAmount"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="32dp"
+        android:layout_marginEnd="16dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

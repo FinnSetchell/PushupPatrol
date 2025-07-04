@@ -1,4 +1,4 @@
-package com.example.pushuppatrol
+package com.example.pushuppatrol.core.blocking
 
 import android.graphics.drawable.Drawable
 

@@ -1,4 +1,4 @@
-package com.example.pushuppatrol.activitytracking // Or your chosen package
+package com.example.pushuppatrol.features.activitytracking // Or your chosen package
 
 import android.content.Context
 // import android.Manifest // Not strictly needed here, but good for context

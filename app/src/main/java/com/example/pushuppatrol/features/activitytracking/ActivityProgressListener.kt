@@ -1,4 +1,4 @@
-package com.example.pushuppatrol.activitytracking // Or your chosen package
+package com.example.pushuppatrol.features.activitytracking // Or your chosen package
 
 /**
  * Interface for receiving updates from a [TrackableActivity].

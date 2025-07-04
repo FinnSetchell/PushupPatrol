@@ -50,6 +50,24 @@
     <!-- ... other strings ... -->
     <string name="activity_name_squats_beta">Squats (Beta)</string>
     <string name="tv_daily_bonus_info">Daily time bonus available</string>
+<!-- For Settings Screen - Daily Bonus Section -->
+    <string name="settings_section_daily_bonus_title">Daily Time Bonus</string>
+    <string name="settings_enable_daily_bonus_label">Enable Daily Bonus</string>
+    <string name="settings_daily_bonus_amount_label">Bonus Amount</string>
+
+    <!-- For Daily Bonus Amount Spinner -->
+    <string-array name="daily_bonus_amount_entries_settings">
+        <item>30 Seconds</item>
+        <item>1 Minute (60s)</item>
+        <item>2 Minutes (120s)</item>
+        <item>5 Minutes (300s)</item>
+    </string-array>
+    <string-array name="daily_bonus_amount_values_settings">
+        <item>30</item> <!-- Values are in seconds -->
+        <item>60</item>
+        <item>120</item>
+        <item>300</item>
+    </string-array>
 
     <!-- <string name="btn_earn_more_time">Earn More Time</string> -->
 

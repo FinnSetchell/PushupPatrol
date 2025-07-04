@@ -1,4 +1,4 @@
-package com.example.pushuppatrol
+package com.example.pushuppatrol.ui.main
 
 import android.view.LayoutInflater
 import android.view.View
@@ -7,6 +7,8 @@ import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.example.pushuppatrol.core.blocking.AppInfo
+import com.example.pushuppatrol.R
 
 class AppSelectionAdapter(
     private val appList: MutableList<AppInfo>,

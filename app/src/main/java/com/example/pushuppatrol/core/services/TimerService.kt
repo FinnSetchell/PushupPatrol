@@ -1,4 +1,4 @@
-package com.example.pushuppatrol // Replace with your actual package name
+package com.example.pushuppatrol.core.services // Replace with your actual package name
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -12,6 +12,11 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.example.pushuppatrol.MainApplication
+import com.example.pushuppatrol.R
+import com.example.pushuppatrol.core.blocking.AppBlockerEventManager
+import com.example.pushuppatrol.core.time.TimeBankManager
+import com.example.pushuppatrol.ui.main.MainActivity
 import kotlinx.coroutines.*
 
 class TimerService : Service() {
@@ -53,7 +58,10 @@ class TimerService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d(TAG, "onStartCommand received: ${intent?.action}, App: ${intent?.getStringExtra(EXTRA_APP_PACKAGE)}, Current Monitored: $currentMonitoredApp, Paused: $isPaused, Job Active: ${serviceJob?.isActive}")
+        Log.d(
+            TAG, "onStartCommand received: ${intent?.action}, App: ${intent?.getStringExtra(
+                EXTRA_APP_PACKAGE
+            )}, Current Monitored: $currentMonitoredApp, Paused: $isPaused, Job Active: ${serviceJob?.isActive}")
 
         val appPackage = intent?.getStringExtra(EXTRA_APP_PACKAGE)
 

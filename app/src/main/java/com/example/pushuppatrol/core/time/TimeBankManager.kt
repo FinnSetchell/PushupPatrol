@@ -1,9 +1,9 @@
-package com.example.pushuppatrol
+package com.example.pushuppatrol.core.time
 
 import android.content.Context
 import android.util.Log
 import androidx.core.content.edit
-import com.example.pushuppatrol.activitytracking.ActivityType // Ensure this import is present
+import com.example.pushuppatrol.features.activitytracking.ActivityType // Ensure this import is present
 
 class TimeBankManager(context: Context) {
     private val sharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

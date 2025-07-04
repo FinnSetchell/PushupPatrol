@@ -1,4 +1,4 @@
-package com.example.pushuppatrol.activitytracking
+package com.example.pushuppatrol.features.activitytracking
 
 /**
  * Represents the different types of physical activities users can perform.

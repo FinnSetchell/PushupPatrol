@@ -1,4 +1,4 @@
-package com.example.pushuppatrol
+package com.example.pushuppatrol.core.blocking
 
 import android.util.Log
 
@@ -7,7 +7,7 @@ object AppBlockerEventManager {
     private var listener: TimeExpirationListener? = null
 
     fun setTimeExpirationListener(listener: TimeExpirationListener?) {
-        this.listener = listener
+        AppBlockerEventManager.listener = listener
         Log.d(TAG, "TimeExpirationListener ${if (listener != null) "set" else "cleared"}")
     }
 

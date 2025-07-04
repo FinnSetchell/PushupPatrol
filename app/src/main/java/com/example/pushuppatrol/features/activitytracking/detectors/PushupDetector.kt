@@ -1,4 +1,4 @@
-package com.example.pushuppatrol.activitytracking.detectors
+package com.example.pushuppatrol.features.activitytracking.detectors
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -8,9 +8,9 @@ import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import com.example.pushuppatrol.R
-import com.example.pushuppatrol.activitytracking.ActivityConfiguration
-import com.example.pushuppatrol.activitytracking.ActivityProgressListener
-import com.example.pushuppatrol.activitytracking.TrackableActivity
+import com.example.pushuppatrol.features.activitytracking.ActivityConfiguration
+import com.example.pushuppatrol.features.activitytracking.ActivityProgressListener
+import com.example.pushuppatrol.features.activitytracking.TrackableActivity
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.pose.PoseDetection
 import com.google.mlkit.vision.pose.PoseDetector

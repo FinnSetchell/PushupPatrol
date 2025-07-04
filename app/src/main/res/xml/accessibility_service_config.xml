@@ -7,4 +7,4 @@
     android:description="@string/accessibility_service_description"
     android:notificationTimeout="100" />
     <!-- Settings Activity is optional but good practice for later -->
-    <!-- android:settingsActivity="com.example.pushuppatrol.SettingsActivity" -->
+    <!-- android:settingsActivity="com.example.pushuppatrol.ui.settings.SettingsActivity" -->

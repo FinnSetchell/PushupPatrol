@@ -1,6 +1,5 @@
-package com.example.pushuppatrol
+package com.example.pushuppatrol.ui.earning
 
-import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
@@ -9,9 +8,10 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import com.example.pushuppatrol.activitytracking.ActivityProgressListener
-import com.example.pushuppatrol.activitytracking.TrackableActivity
-import com.example.pushuppatrol.activitytracking.detectors.PushupDetector
+import com.example.pushuppatrol.core.time.TimeBankManager
+import com.example.pushuppatrol.features.activitytracking.ActivityProgressListener
+import com.example.pushuppatrol.features.activitytracking.TrackableActivity
+import com.example.pushuppatrol.features.activitytracking.detectors.PushupDetector
 import com.example.pushuppatrol.databinding.ActivityPushupBinding
 
 class PushupActivity : AppCompatActivity(), ActivityProgressListener {

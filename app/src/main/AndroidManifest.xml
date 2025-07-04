@@ -29,19 +29,19 @@
         android:theme="@style/Theme.PushupPatrol"
         tools:targetApi="31">
         <activity
-            android:name=".SettingsActivity"
+            android:name=".ui.settings.SettingsActivity"
             android:exported="false" />
         <activity
-            android:name=".InterstitialBlockActivity"
+            android:name=".ui.blocking.InterstitialBlockActivity"
             android:excludeFromRecents="true"
             android:exported="false"
             android:launchMode="singleTop"
             android:theme="@style/Theme.PushupPatrol" />
         <activity
-            android:name=".AppSelectionActivity"
+            android:name=".ui.main.AppSelectionActivity"
             android:exported="false" />
         <activity
-            android:name=".MainActivity"
+            android:name=".ui.main.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -50,11 +50,11 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".PushupActivity"
+            android:name=".ui.earning.PushupActivity"
             android:exported="false" />
 
         <service
-            android:name=".AppBlockerService"
+            android:name=".core.blocking.AppBlockerService"
             android:exported="true"
             android:label="@string/accessibility_service_label"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
@@ -67,7 +67,7 @@
                 android:resource="@xml/accessibility_service_config" />
         </service> <!-- SINGLE, CORRECT declaration for TimerService -->
         <service
-            android:name=".TimerService"
+            android:name=".core.services.TimerService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />

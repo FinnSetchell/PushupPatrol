@@ -1,4 +1,4 @@
-package com.example.pushuppatrol
+package com.example.pushuppatrol.ui.main
 
 import android.content.Context
 import android.content.Intent
@@ -10,6 +10,8 @@ import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.pushuppatrol.core.blocking.AppBlockerService
+import com.example.pushuppatrol.core.blocking.AppInfo
 import com.example.pushuppatrol.databinding.ActivityAppSelectionBinding
 
 class AppSelectionActivity : AppCompatActivity() {

@@ -1,11 +1,11 @@
-package com.example.pushuppatrol.launcher
+package com.example.pushuppatrol.util.launcher
 
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import android.util.Log
-import com.example.pushuppatrol.PushupActivity
-import com.example.pushuppatrol.activitytracking.ActivityType
+import com.example.pushuppatrol.ui.earning.PushupActivity
+import com.example.pushuppatrol.features.activitytracking.ActivityType
 
 object ActivityLauncher {
 
