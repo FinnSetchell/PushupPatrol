@@ -10,7 +10,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.pushuppatrol.databinding.ActivityAppSelectionBinding // Assuming ViewBinding
+import com.example.pushuppatrol.databinding.ActivityAppSelectionBinding
 
 class AppSelectionActivity : AppCompatActivity() {
 
@@ -21,8 +21,9 @@ class AppSelectionActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "AppSelectionActivity"
-        const val PREFS_NAME = "AppBlockerPrefs"
-        const val KEY_LOCKED_APPS = "locked_app_packages"
+        // PREFS_NAME and KEY_LOCKED_APPS can be accessed via AppBlockerService.PREFS_NAME
+        // if you want a single source of truth, but keeping them here is also fine
+        // as long as they match.
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,7 +31,8 @@ class AppSelectionActivity : AppCompatActivity() {
         binding = ActivityAppSelectionBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        sharedPreferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        // Use PREFS_NAME from AppBlockerService to ensure consistency
+        sharedPreferences = getSharedPreferences(AppBlockerService.PREFS_NAME, Context.MODE_PRIVATE)
 
         binding.btnSaveSelections.setOnClickListener {
             saveLockedAppsList()
@@ -44,7 +46,6 @@ class AppSelectionActivity : AppCompatActivity() {
 
     private fun setupRecyclerView() {
         appSelectionAdapter = AppSelectionAdapter(installedAppsList) { appInfo ->
-            // This lambda is called when a checkbox state changes in the adapter
             Log.d(TAG, "App selected: ${appInfo.appName}, New state: ${appInfo.isSelected}")
         }
         binding.rvAppList.apply {
@@ -56,13 +57,13 @@ class AppSelectionActivity : AppCompatActivity() {
     private fun loadInstalledApps() {
         val pm = packageManager
         val packages = pm.getInstalledApplications(PackageManager.GET_META_DATA)
-        val previouslySelectedApps = loadLockedAppsList()
+        // Use KEY_LOCKED_APPS from AppBlockerService
+        val previouslySelectedApps = sharedPreferences.getStringSet(AppBlockerService.KEY_LOCKED_APPS, emptySet()) ?: emptySet()
         val ownPackageName = packageName
 
         installedAppsList.clear()
 
         for (appInfoPm in packages) {
-            // Exclude own app
             if (appInfoPm.packageName == ownPackageName) {
                 Log.d(TAG, "Skipping own app: ${appInfoPm.packageName}")
                 continue
@@ -73,7 +74,7 @@ class AppSelectionActivity : AppCompatActivity() {
             ) {
                 try {
                     val appName = pm.getApplicationLabel(appInfoPm).toString()
-                    val packageNameVal = appInfoPm.packageName // Renamed to avoid conflict
+                    val packageNameVal = appInfoPm.packageName
                     val icon = pm.getApplicationIcon(appInfoPm)
                     val isSelected = previouslySelectedApps.contains(packageNameVal)
 
@@ -93,17 +94,32 @@ class AppSelectionActivity : AppCompatActivity() {
         val selectedPackages = installedAppsList
             .filter { it.isSelected }
             .map { it.packageName }
-            .toSet() // Use a Set to store as string set in SharedPreferences
+            .toSet()
 
-        sharedPreferences.edit().putStringSet(KEY_LOCKED_APPS, selectedPackages).apply()
-        Log.d(TAG, "Saved locked apps: $selectedPackages")
+        // Use KEY_LOCKED_APPS from AppBlockerService
+        // Using commit() for synchronous write as discussed
+        val success = sharedPreferences.edit().putStringSet(AppBlockerService.KEY_LOCKED_APPS, selectedPackages).commit()
+        Log.d(TAG, "Saved locked apps to SharedPreferences (success: $success): $selectedPackages")
 
-        val intent = Intent("com.example.pushuppatrol.LOCKED_APPS_UPDATED")
-        sendBroadcast(intent) // Or use LocalBroadcastManager for better security/efficiency
-        Log.d(TAG, "Sent LOCKED_APPS_UPDATED broadcast.")
+        // --- MODIFIED: Replace broadcast with startService ---
+        val updateServiceIntent = Intent(this, AppBlockerService::class.java).apply {
+            action = AppBlockerService.ACTION_REFRESH_LOCKED_APPS // <<< USE NEW ACTION
+        }
+        try {
+            // For a service that might not be running or is an accessibility service,
+            // using startService is appropriate here.
+            startService(updateServiceIntent)
+            Log.i(TAG, "Sent ACTION_REFRESH_LOCKED_APPS to AppBlockerService via startService.")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sending ACTION_REFRESH_LOCKED_APPS to AppBlockerService", e)
+            // Consider informing the user or other fallback if this fails, though unlikely for an internal service.
+        }
     }
 
-    private fun loadLockedAppsList(): Set<String> {
-        return sharedPreferences.getStringSet(KEY_LOCKED_APPS, emptySet()) ?: emptySet()
-    }
+    // This local loadLockedAppsList is only used for populating the UI initially in this activity.
+    // It's fine to keep it, or you could also remove it if you always rely on the
+    // adapter's state after loadInstalledApps.
+    // private fun loadLockedAppsList(): Set<String> {
+    //     return sharedPreferences.getStringSet(AppBlockerService.KEY_LOCKED_APPS, emptySet()) ?: emptySet()
+    // }
 }
