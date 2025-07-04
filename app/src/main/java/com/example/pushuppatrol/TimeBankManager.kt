@@ -1,76 +1,109 @@
-package com.example.pushuppatrol // Replace with your actual package name
+package com.example.pushuppatrol
 
 import android.content.Context
-import android.content.SharedPreferences
+import android.util.Log
+import androidx.core.content.edit
+import com.example.pushuppatrol.activitytracking.ActivityType // Ensure this import is present
 
 class TimeBankManager(context: Context) {
+    private val sharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     companion object {
-        private const val PREFS_NAME = "PushupPatrolPrefs"
-        private const val KEY_TIME_BANK_SECONDS = "timeBankSeconds"
-        private const val PUSHUP_TO_MINUTES_CONVERSION = 1 // 1 push-up = 1 minute
+        private const val PREFS_NAME = "TimeBankPrefs"
+        private const val KEY_TIME_SECONDS = "time_seconds"
+        private const val KEY_SECONDS_PER_PUSHUP = "seconds_per_pushup"
+        private const val DEFAULT_SECONDS_PER_PUSHUP = 60
+        private const val TAG = "TimeBankManager"
+
+        // New preference key for default activity type
+        private const val PREF_KEY_DEFAULT_ACTIVITY_TYPE = "default_activity_type"
     }
 
-    private val sharedPreferences: SharedPreferences =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    // ... (existing methods: addTimeSeconds, useTime, getTimeSeconds, hasTime, clearTimeBank) ...
 
-    /**
-     * Adds time to the bank based on the number of push-ups.
-     * Each push-up earns a predefined number of minutes.
-     * @param pushupCount The number of push-ups completed.
-     */
     fun addPushups(pushupCount: Int) {
-        if (pushupCount <= 0) return
-        val minutesEarned = pushupCount * PUSHUP_TO_MINUTES_CONVERSION
-        val secondsEarned = minutesEarned * 60
-        val currentSeconds = getTimeSeconds()
-        val newTotalSeconds = currentSeconds + secondsEarned
-        sharedPreferences.edit().putLong(KEY_TIME_BANK_SECONDS, newTotalSeconds.toLong()).apply()
+        val secondsPerPushup = getSecondsPerPushup()
+        val timeToAdd = pushupCount * secondsPerPushup
+        addTimeSeconds(timeToAdd)
+        Log.d(TAG, "$pushupCount push-ups added $timeToAdd seconds. Seconds per push-up: $secondsPerPushup. New total: ${getTimeSeconds()}s")
+    }
+    fun addPushups(pushupCount: Int, secondsPerPushup: Int) { // Overloaded for flexibility if needed elsewhere
+        val timeToAdd = pushupCount * secondsPerPushup
+        addTimeSeconds(timeToAdd)
+        Log.d(TAG, "$pushupCount push-ups added $timeToAdd seconds (using $secondsPerPushup s/push-up). New total: ${getTimeSeconds()}s")
     }
 
-    /**
-     * Directly adds a specified number of seconds to the time bank.
-     * Useful for features like the "Snooze" button.
-     * @param seconds The number of seconds to add.
-     */
+
+    fun setSecondsPerPushup(seconds: Int) {
+        sharedPreferences.edit {
+            putInt(KEY_SECONDS_PER_PUSHUP, seconds)
+        }
+        Log.d(TAG, "Seconds per push-up set to: $seconds")
+    }
+
+    fun getSecondsPerPushup(): Int {
+        return sharedPreferences.getInt(KEY_SECONDS_PER_PUSHUP, DEFAULT_SECONDS_PER_PUSHUP)
+    }
+
+    // --- New Methods for Default Activity Type ---
+    fun setDefaultActivityType(activityType: ActivityType) {
+        sharedPreferences.edit {
+            putString(PREF_KEY_DEFAULT_ACTIVITY_TYPE, activityType.name) // Save enum by its name
+        }
+        Log.d(TAG, "Default activity type preference set to: ${activityType.name}")
+    }
+
+    fun getDefaultActivityType(): ActivityType {
+        // Use PUSHUPS.name as the default string if nothing is found
+        val typeName = sharedPreferences.getString(PREF_KEY_DEFAULT_ACTIVITY_TYPE, ActivityType.PUSHUPS.name)
+        return try {
+            ActivityType.valueOf(typeName ?: ActivityType.PUSHUPS.name)
+        } catch (e: IllegalArgumentException) {
+            Log.w(TAG, "Invalid saved activity type '$typeName', defaulting to PUSHUPS.", e)
+            ActivityType.PUSHUPS // Fallback if the saved string is somehow invalid
+        }
+    }
+    // --- End New Methods ---
+
+    // Existing methods from your snippet (ensure they are here)
     fun addTimeSeconds(seconds: Int) {
-        if (seconds <= 0) return
-        val currentSeconds = getTimeSeconds()
-        val newTotalSeconds = currentSeconds + seconds
-        sharedPreferences.edit().putLong(KEY_TIME_BANK_SECONDS, newTotalSeconds.toLong()).apply()
+        val currentTotal = getTimeSeconds()
+        val newTotal = currentTotal + seconds
+        sharedPreferences.edit {
+            putInt(KEY_TIME_SECONDS, newTotal)
+        }
+        Log.d(TAG, "Added $seconds seconds. Old total: $currentTotal. New total: $newTotal")
     }
 
-
-    /**
-     * Gets the current time available in the bank, in seconds.
-     * @return Total seconds available.
-     */
-    fun getTimeSeconds(): Int {
-        // Use getLong and convert to Int, defaulting to 0L if not found
-        return sharedPreferences.getLong(KEY_TIME_BANK_SECONDS, 0L).toInt()
-    }
-
-    /**
-     * Consumes a specified number of seconds from the time bank.
-     * @param secondsToUse The number of seconds to consume.
-     * @return True if time was successfully used, false if not enough time or invalid input.
-     */
     fun useTime(secondsToUse: Int): Boolean {
-        if (secondsToUse <= 0) return false // Cannot use zero or negative time
-
-        val currentSeconds = getTimeSeconds()
-        if (currentSeconds >= secondsToUse) {
-            val remainingSeconds = currentSeconds - secondsToUse
-            sharedPreferences.edit().putLong(KEY_TIME_BANK_SECONDS, remainingSeconds.toLong()).apply()
+        val currentTotal = getTimeSeconds()
+        if (currentTotal >= secondsToUse) {
+            val newTotal = currentTotal - secondsToUse
+            sharedPreferences.edit {
+                putInt(KEY_TIME_SECONDS, newTotal)
+            }
+            Log.d(TAG, "Used $secondsToUse seconds. Old total: $currentTotal. New total: $newTotal")
             return true
         }
-        return false // Not enough time
+        Log.d(TAG, "Not enough time to use $secondsToUse seconds. Current total: $currentTotal")
+        return false
     }
 
-    /**
-     * Clears the entire time bank. Useful for testing or reset.
-     */
+    fun getTimeSeconds(): Int {
+        return sharedPreferences.getInt(KEY_TIME_SECONDS, 0)
+    }
+
+    fun hasTime(): Boolean {
+        return getTimeSeconds() > 0
+    }
+
     fun clearTimeBank() {
-        sharedPreferences.edit().remove(KEY_TIME_BANK_SECONDS).apply()
+        sharedPreferences.edit {
+            putInt(KEY_TIME_SECONDS, 0)
+            // Optionally reset other settings here too if desired
+            // putInt(KEY_SECONDS_PER_PUSHUP, DEFAULT_SECONDS_PER_PUSHUP)
+            // putString(PREF_KEY_DEFAULT_ACTIVITY_TYPE, ActivityType.PUSHUPS.name)
+        }
+        Log.d(TAG, "Time bank cleared.")
     }
 }

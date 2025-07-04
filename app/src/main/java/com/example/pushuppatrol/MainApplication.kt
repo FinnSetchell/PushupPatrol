@@ -21,30 +21,28 @@ class MainApplication : Application() {
 
     private fun createAppNotificationChannels() {
         // Notification channels are only available on API 26+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
-            // Channel for the Timer Service
-            val timerServiceChannel = NotificationChannel(
-                TIMER_SERVICE_CHANNEL_ID,
-                "App Usage Timer", // User-visible name of the channel
-                NotificationManager.IMPORTANCE_LOW // Use LOW to avoid sound/peeking for ongoing status
-            ).apply {
-                description = "Displays the remaining time for apps being actively monitored."
-                setSound(null, null) // No sound for updates to this ongoing notification
-                enableVibration(false) // No vibration for updates
-                // You could set other properties like setShowBadge(false) if desired
-            }
-
-            // Get the NotificationManager system service
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-            // Create the channel
-            manager.createNotificationChannel(timerServiceChannel)
-
-            // If you had other channels, you would create them here too
-            // Example:
-            // val alertsChannel = NotificationChannel(...)
-            // manager.createNotificationChannel(alertsChannel)
+        // Channel for the Timer Service
+        val timerServiceChannel = NotificationChannel(
+            TIMER_SERVICE_CHANNEL_ID,
+            "App Usage Timer", // User-visible name of the channel
+            NotificationManager.IMPORTANCE_LOW // Use LOW to avoid sound/peeking for ongoing status
+        ).apply {
+            description = "Displays the remaining time for apps being actively monitored."
+            setSound(null, null) // No sound for updates to this ongoing notification
+            enableVibration(false) // No vibration for updates
+            // You could set other properties like setShowBadge(false) if desired
         }
+
+        // Get the NotificationManager system service
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        // Create the channel
+        manager.createNotificationChannel(timerServiceChannel)
+
+        // If you had other channels, you would create them here too
+        // Example:
+        // val alertsChannel = NotificationChannel(...)
+        // manager.createNotificationChannel(alertsChannel)
     }
 }

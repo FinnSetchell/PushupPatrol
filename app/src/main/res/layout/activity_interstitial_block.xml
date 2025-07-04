@@ -93,7 +93,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="24dp"
         android:backgroundTint="#FFC107"
-        android:text="Dev: Reset Grace Period"
+        android:text="@string/btn_dev_reset_grace_period"
         android:textColor="@android:color/black"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"

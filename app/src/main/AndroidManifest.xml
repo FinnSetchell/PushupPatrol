@@ -4,18 +4,21 @@
     package="com.example.pushuppatrol">
 
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+
     <queries>
         <package android:name="com.instagram.android" />
         <package android:name="com.google.android.youtube" />
     </queries>
 
     <uses-feature android:name="android.hardware.camera.any" />
+
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <application
+        android:name=".MainApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -24,9 +27,10 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.PushupPatrol"
-        tools:targetApi="31"
-        android:name=".MainApplication">
-
+        tools:targetApi="31">
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false" />
         <activity
             android:name=".InterstitialBlockActivity"
             android:excludeFromRecents="true"
@@ -66,7 +70,7 @@
             android:name=".TimerService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="dataSync"></service>
+            android:foregroundServiceType="dataSync" />
     </application>
 
 </manifest>

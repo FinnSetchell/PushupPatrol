@@ -6,27 +6,45 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBarLayoutMain"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fitsSystemWindows="true"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbarMain"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:title=""/>
+        <!-- Or any other title -->
+    </com.google.android.material.appbar.AppBarLayout>
+
     <!-- Main Status Display - The "Hero" Element -->
+
+    <!-- Main User Actions -->
     <TextView
         android:id="@+id/tvTimeRemaining"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="64dp"
-        android:textStyle="bold"
+        android:layout_marginTop="32dp"
         android:textSize="48sp"
+        android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/appBarLayoutMain"
         tools:text="15:32" />
 
-    <!-- Main User Actions -->
     <Button
         android:id="@+id/btnEarnTime"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
         android:padding="16dp"
-        android:text="EARN MORE TIME"
+        android:text="@string/btn_earn_more_time"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvTimeRemaining"
@@ -38,7 +56,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="Select Apps to Lock"
+        android:text="@string/btn_select_apps"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/btnEarnTime"
@@ -51,7 +69,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="Enable App Blocker Service"
+        android:text="@string/btn_enable_accessibility"
         app:layout_constraintEnd_toEndOf="@+id/btnSelectApps"
         app:layout_constraintStart_toStartOf="@+id/btnSelectApps"
         app:layout_constraintTop_toBottomOf="@id/btnSelectApps" />
@@ -64,7 +82,7 @@
         android:layout_height="wrap_content"
         android:layout_marginEnd="8dp"
         android:backgroundTint="#FFC107"
-        android:text="Dev: +10s"
+        android:text="@string/btn_dev_add_time"
         android:textColor="@android:color/black"
         app:layout_constraintBottom_toBottomOf="@+id/resetTimeButton"
         app:layout_constraintEnd_toStartOf="@+id/resetTimeButton"
@@ -77,11 +95,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="24dp"
-        android:text="Reset Time"
+        android:text="@string/btn_reset_time"
         app:backgroundTint="#E53935"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/btnDevAdd10Seconds" />
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>
