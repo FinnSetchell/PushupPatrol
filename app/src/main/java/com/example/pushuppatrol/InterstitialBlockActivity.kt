@@ -15,7 +15,7 @@ import com.example.pushuppatrol.databinding.ActivityInterstitialBlockBinding
 class InterstitialBlockActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityInterstitialBlockBinding
-    private lateinit var gracePeriodManager: GracePeriodManager
+    private lateinit var dailyBonusManager: DailyBonusManager
     // private lateinit var timeBankManager: TimeBankManager // Not strictly needed here anymore, but could be useful for display
 
     private var blockedAppPackageName: String? = null
@@ -32,7 +32,7 @@ class InterstitialBlockActivity : AppCompatActivity() {
         binding = ActivityInterstitialBlockBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        gracePeriodManager = GracePeriodManager(applicationContext)
+        dailyBonusManager = DailyBonusManager(applicationContext)
         // timeBankManager = TimeBankManager(applicationContext) // Optional: if you want to display current time
 
         blockedAppPackageName = intent.getStringExtra(EXTRA_BLOCKED_APP_PACKAGE_NAME)
@@ -76,39 +76,39 @@ class InterstitialBlockActivity : AppCompatActivity() {
         binding.tvInterstitialTitle.text = getString(R.string.interstitial_title_placeholder, appName)
         binding.ivBlockedAppIcon.setImageDrawable(getAppIconFromPackage(blockedAppPackageName))
 
-        updateGracePeriodButtonState()
+        updateBonusTimeButtonState()
 
         if (isDebugBuild()) {
-            binding.btnDevResetGracePeriod.visibility = View.VISIBLE
+            binding.btnDevResetDailyBonus.visibility = View.VISIBLE
         } else {
-            binding.btnDevResetGracePeriod.visibility = View.GONE
+            binding.btnDevResetDailyBonus.visibility = View.GONE
         }
         // Optionally, display current time in bank:
         // binding.tvSomeTimeBankDisplay.text = "Current time: ${timeBankManager.getTimeSeconds()}s"
     }
 
-    private fun updateGracePeriodButtonState() {
-        if (gracePeriodManager.canAwardGraceTimeToday()) {
-            binding.btnUseGracePeriod.isEnabled = true
-            binding.btnUseGracePeriod.text = getString(R.string.interstitial_button_get_grace_time, GracePeriodManager.GRACE_PERIOD_AWARD_SECONDS)
-            binding.tvGracePeriodInfo.text = getString(R.string.grace_period_available_info)
+    private fun updateBonusTimeButtonState() {
+        if (dailyBonusManager.canAwardBonusTimeToday()) {
+            binding.btnClaimDailyBonus.isEnabled = true
+            binding.btnClaimDailyBonus.text = getString(R.string.interstitial_button_get_bonus_time, DailyBonusManager.BONUS_TIME_AWARD_SECONDS)
+            binding.tvDailyBonusInfo.text = getString(R.string.bonus_time_available_info)
         } else {
-            binding.btnUseGracePeriod.isEnabled = false
-            binding.btnUseGracePeriod.text = getString(R.string.interstitial_button_get_grace_time_used, GracePeriodManager.GRACE_PERIOD_AWARD_SECONDS)
-            binding.tvGracePeriodInfo.text = getString(R.string.grace_period_used_info)
+            binding.btnClaimDailyBonus.isEnabled = false
+            binding.btnClaimDailyBonus.text = getString(R.string.interstitial_button_get_bonus_time_used, DailyBonusManager.BONUS_TIME_AWARD_SECONDS)
+            binding.tvDailyBonusInfo.text = getString(R.string.bonus_time_used_info)
         }
     }
 
     private fun setupListeners() {
-        binding.btnUseGracePeriod.setOnClickListener {
-            if (gracePeriodManager.awardGraceTime()) {
+        binding.btnClaimDailyBonus.setOnClickListener {
+            if (dailyBonusManager.awardBonusTime()) {
                 // Time has been added to the bank. AppBlockerService will pick this up.
-                Toast.makeText(this, getString(R.string.grace_time_awarded_toast, GracePeriodManager.GRACE_PERIOD_AWARD_SECONDS), Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.bonus_time_awarded_toast, DailyBonusManager.BONUS_TIME_AWARD_SECONDS), Toast.LENGTH_SHORT).show()
                 Log.i(TAG, "Grace time awarded for $blockedAppPackageName. Finishing InterstitialActivity.")
                 finishAffinity() // Close this task, user returns to the blocked app, service re-evaluates
             } else {
-                Toast.makeText(this, R.string.grace_period_unavailable_toast, Toast.LENGTH_SHORT).show()
-                updateGracePeriodButtonState()
+                Toast.makeText(this, R.string.bonus_time_unavailable_toast, Toast.LENGTH_SHORT).show()
+                updateBonusTimeButtonState()
             }
         }
 
@@ -131,11 +131,11 @@ class InterstitialBlockActivity : AppCompatActivity() {
             finishAffinity()
         }
 
-        binding.btnDevResetGracePeriod.setOnClickListener {
-            gracePeriodManager.resetGracePeriodAwardState()
+        binding.btnDevResetDailyBonus.setOnClickListener {
+            dailyBonusManager.resetBonusTimeAwardState()
             Toast.makeText(this, "DEV: Grace period award state reset!", Toast.LENGTH_SHORT).show()
             Log.d(TAG, "Developer action: Grace period award state reset.")
-            updateGracePeriodButtonState()
+            updateBonusTimeButtonState()
         }
     }
 

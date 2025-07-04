@@ -43,26 +43,26 @@
         app:layout_constraintTop_toBottomOf="@+id/tvInterstitialTitle" />
 
     <Button
-        android:id="@+id/btnUseGracePeriod"
+        android:id="@+id/btnClaimDailyBonus"
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
-        android:text="@string/interstitial_button_use_grace_period"
+        android:text="@string/interstitial_button_use_bonus_time"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/tvInterstitialMessage" />
 
     <TextView
-        android:id="@+id/tvGracePeriodInfo"
+        android:id="@+id/tvDailyBonusInfo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:textSize="12sp"
-        tools:text="Daily grace period available"
-        app:layout_constraintTop_toBottomOf="@+id/btnUseGracePeriod"
-        app:layout_constraintStart_toStartOf="@+id/btnUseGracePeriod"
-        app:layout_constraintEnd_toEndOf="@+id/btnUseGracePeriod" />
+        tools:text="@string/tv_daily_bonus_info"
+        app:layout_constraintTop_toBottomOf="@+id/btnClaimDailyBonus"
+        app:layout_constraintStart_toStartOf="@+id/btnClaimDailyBonus"
+        app:layout_constraintEnd_toEndOf="@+id/btnClaimDailyBonus" />
 
     <Button
         android:id="@+id/btnEarnTime"
@@ -72,7 +72,7 @@
         android:text="@string/interstitial_button_earn_time"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tvGracePeriodInfo" />
+        app:layout_constraintTop_toBottomOf="@+id/tvDailyBonusInfo" />
 
     <Button
         android:id="@+id/btnTakeBreak"
@@ -87,13 +87,13 @@
 
     <!-- Your Developer Reset Button -->
     <Button
-        android:id="@+id/btnDevResetGracePeriod"
+        android:id="@+id/btnDevResetDailyBonus"
         style="@style/Widget.MaterialComponents.Button.TextButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="24dp"
         android:backgroundTint="#FFC107"
-        android:text="@string/btn_dev_reset_grace_period"
+        android:text="@string/btn_dev_reset_bonus_period"
         android:textColor="@android:color/black"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"

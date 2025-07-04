@@ -8,20 +8,20 @@
     <!-- ... other strings ... -->
     <string name="interstitial_title_placeholder">Time\'s Up for %s!</string>
     <string name="interstitial_message_time_up">You\'ve run out of time for this app. You can use
-        your daily grace period or earn more time.
+        your daily bonus or earn more time.
     </string>
-    <string name="interstitial_button_use_grace_period">Use Daily Bonus (30s)</string>
+    <string name="interstitial_button_use_bonus_time">Use Daily Bonus (30s)</string>
     <string name="interstitial_button_earn_time">Earn More Time</string>
-    <string name="grace_period_activated_toast">Bonus activated for 30 seconds!</string>
-    <string name="grace_period_unavailable_toast">Daily bonus already used.</string>
+    <string name="bonus_time_activated_toast">Bonus activated for 30 seconds!</string>
+    <string name="bonus_time_unavailable_toast">Daily bonus already used.</string>
     <string name="blocked_app_icon_description">Blocked App Icon</string>
-    <string name="grace_period_available_info">Daily bonus available</string>
-    <string name="grace_period_used_info">Daily bonus used for today</string>
+    <string name="bonus_time_available_info">Daily bonus available</string>
+    <string name="bonus_time_used_info">Daily bonus used for today</string>
     <string name="interstitial_button_take_break">Take a Break</string>
     <!-- ... other strings ... -->
-    <string name="interstitial_button_get_grace_time">Get %1$ds Bonus Time</string>
-    <string name="interstitial_button_get_grace_time_used">Daily %1$ds Bonus Used</string>
-    <string name="grace_time_awarded_toast">%1$ds bonus time added to your bank!</string>
+    <string name="interstitial_button_get_bonus_time">Get %1$ds Bonus Time</string>
+    <string name="interstitial_button_get_bonus_time_used">Daily %1$ds Bonus Used</string>
+    <string name="bonus_time_awarded_toast">%1$ds bonus time added to your bank!</string>
     <string name="accessibility_service_enabled_text">Accessibility Service Enabled</string>
     <string name="enable_app_blocker_service_text">Enable App Blocker Service</string>
 
@@ -38,7 +38,7 @@
     <string name="btn_enable_accessibility">Enable App Blocker Service</string>
     <string name="btn_reset_time">Reset Time</string>
     <string name="btn_dev_add_time">Dev: +10s</string>
-    <string name="btn_dev_reset_grace_period">Dev: Reset Grace Period</string>
+    <string name="btn_dev_reset_bonus_period">Dev: Reset Bonus Period</string>
     <string name="tv_app_selection_title">Select Apps to Lock</string>
     <string name="btn_save_selections">Save Selections</string>
        <!-- ... other strings ... -->
@@ -49,6 +49,7 @@
     <string name="activity_name_steps">Steps (Soon)</string>
     <!-- ... other strings ... -->
     <string name="activity_name_squats_beta">Squats (Beta)</string>
+    <string name="tv_daily_bonus_info">Daily time bonus available</string>
 
     <!-- <string name="btn_earn_more_time">Earn More Time</string> -->
 
