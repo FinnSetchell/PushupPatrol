@@ -47,6 +47,8 @@
     <string name="activity_name_pushups">Push-ups</string>
     <string name="activity_name_squats">Squats (Soon)</string>
     <string name="activity_name_steps">Steps (Soon)</string>
+    <!-- ... other strings ... -->
+    <string name="activity_name_squats_beta">Squats (Beta)</string>
 
     <!-- <string name="btn_earn_more_time">Earn More Time</string> -->
 
