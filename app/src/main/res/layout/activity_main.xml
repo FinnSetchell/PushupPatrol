@@ -64,7 +64,7 @@
 
     <!-- Permissions and Settings (Less Frequent Actions) -->
     <Button
-        android:id="@+id/enableAccessibilityButton"
+        android:id="@+id/btnEnableAccessibility"
         style="?attr/materialButtonOutlinedStyle"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -84,14 +84,14 @@
         android:backgroundTint="#FFC107"
         android:text="@string/btn_dev_add_time"
         android:textColor="@android:color/black"
-        app:layout_constraintBottom_toBottomOf="@+id/resetTimeButton"
-        app:layout_constraintEnd_toStartOf="@+id/resetTimeButton"
+        app:layout_constraintBottom_toBottomOf="@+id/btnResetTime"
+        app:layout_constraintEnd_toStartOf="@+id/btnResetTime"
         app:layout_constraintHorizontal_chainStyle="packed"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/resetTimeButton" />
+        app:layout_constraintTop_toTopOf="@+id/btnResetTime" />
 
     <Button
-        android:id="@+id/resetTimeButton"
+        android:id="@+id/btnResetTime"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="24dp"

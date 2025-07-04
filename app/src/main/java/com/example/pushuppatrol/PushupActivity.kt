@@ -73,13 +73,6 @@ class PushupActivity : AppCompatActivity(), ActivityProgressListener {
         blockedAppPackageNameExtra = intent.getStringExtra(EXTRA_BLOCKED_APP_NAME)
         Log.d(TAG, "PushupActivity started. Blocked app package: $blockedAppPackageNameExtra")
 
-        if (blockedAppPackageNameExtra != null) {
-            val friendlyAppName = getAppNameFromPackage(blockedAppPackageNameExtra!!)
-            binding.tvBlockedAppName.text = "Time's up for: $friendlyAppName"
-        } else {
-            binding.tvBlockedAppName.text = ""
-        }
-
         binding.tvPushupCount.text = "$currentPushupCount"
 
         // Permission handling: Check and request using the new launcher
