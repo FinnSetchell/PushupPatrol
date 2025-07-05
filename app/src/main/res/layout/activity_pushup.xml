@@ -16,6 +16,15 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <com.example.pushuppatrol.ui.views.PoseOverlayView
+        android:id="@+id/poseOverlayView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="@+id/previewView"
+        app:layout_constraintBottom_toBottomOf="@+id/previewView"
+        app:layout_constraintStart_toStartOf="@+id/previewView"
+        app:layout_constraintEnd_toEndOf="@+id/previewView" />
+
     <TextView
         android:id="@+id/tvPushupCount"
         style="@style/OverlayTextStyle"
@@ -48,6 +57,25 @@
         app:layout_constraintTop_toBottomOf="@+id/tvPushupCount"
         app:layout_constraintVertical_bias="0.45"
         tools:visibility="visible" />
+
+    <!-- In res/layout/activity_pushup.xml -->
+    <!-- Add this TextView, ideally within a FrameLayout or ConstraintLayout -->
+    <!-- that allows it to overlay the PreviewView. -->
+    <TextView
+        android:id="@+id/tvDebugInfo"
+        android:layout_width="305dp"
+        android:layout_height="163dp"
+        android:background="#80000000"
+        android:padding="4dp"
+        android:text="Debug Info:"
+        android:textColor="#FFFFFF"
+        android:textSize="10sp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@+id/bottom_panel"
+        app:layout_constraintEnd_toEndOf="@+id/tvGuidance"
+        app:layout_constraintStart_toStartOf="@+id/tvGuidance"
+        app:layout_constraintTop_toBottomOf="@+id/tvGuidance" />
+
 
     <View
         android:id="@+id/bottom_panel"

@@ -146,7 +146,7 @@ class InterstitialBlockActivity : AppCompatActivity() {
             // If you want to prevent clicking this during the feedback delay, check a flag or disable it.
             Log.i(TAG, "Earn Time button clicked for $blockedAppPackageName. Launching PushupActivity.")
             val intent = Intent(this, PushupActivity::class.java).apply {
-                putExtra(PushupActivity.EXTRA_BLOCKED_APP_NAME, blockedAppPackageName)
+                putExtra(EXTRA_BLOCKED_APP_PACKAGE_NAME, blockedAppPackageName)
             }
             startActivity(intent)
             finishAffinity()

@@ -1,4 +1,8 @@
-package com.example.pushuppatrol.features.activitytracking // Or your chosen package
+package com.example.pushuppatrol.features.activitytracking
+
+import com.google.mlkit.vision.pose.Pose
+
+// Or your chosen package
 
 /**
  * Interface for receiving updates from a [TrackableActivity].
@@ -49,4 +53,9 @@ interface ActivityProgressListener {
      * @param isReady Indicates whether the activity is now ready to begin active tracking.
      */
     fun onSetupStateChanged(message: String, isReady: Boolean)
+}
+
+interface PoseUpdateListener { // Could be combined with ActivityProgressListener
+    fun onPoseDetected(pose: Pose, imageWidth: Int, imageHeight: Int, isFrontCamera: Boolean)
+    fun onClearPose() // To clear the overlay when no pose is detected or tracking stops
 }

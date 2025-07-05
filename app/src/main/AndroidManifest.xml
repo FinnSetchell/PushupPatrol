@@ -3,20 +3,44 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.example.pushuppatrol">
 
-    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    <!-- =================================== -->
+    <!--           PERMISSIONS               -->
+    <!-- =================================== -->
+    <!-- For detecting foreground apps (Accessibility Service) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- For showing timer notifications on Android 13+ -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- For using the camera to detect exercises -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- For listing other apps for the user to select -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+    <!-- Required for foregroundServiceType="dataSync" on Android 14+ -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
+
+    <!-- =================================== -->
+    <!--           FEATURES                  -->
+    <!-- =================================== -->
+    <!-- Declare that the app uses a camera, but it's not strictly required -->
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="false" />
+
+
+    <!-- =================================== -->
+    <!--           PACKAGE VISIBILITY        -->
+    <!-- =================================== -->
+    <!-- Specific package visibility for apps you might commonly target -->
     <queries>
         <package android:name="com.instagram.android" />
         <package android:name="com.google.android.youtube" />
     </queries>
 
-    <uses-feature android:name="android.hardware.camera.any" />
 
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-
+    <!-- =================================== -->
+    <!--           APPLICATION               -->
+    <!-- =================================== -->
     <application
         android:name=".MainApplication"
         android:allowBackup="true"
@@ -24,35 +48,41 @@
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@drawable/ic_pushup_patrol_logo"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@drawable/ic_pushup_patrol_logo"
         android:supportsRtl="true"
-        android:theme="@style/Theme.PushupPatrol"
-        tools:targetApi="31">
+        android:theme="@style/Theme.PushupPatrol">
+
+        <!-- Activities -->
         <activity
-            android:name=".ui.settings.SettingsActivity"
+            android:name=".ui.main.MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".ui.main.AppSelectionActivity"
             android:exported="false" />
+
         <activity
             android:name=".ui.blocking.InterstitialBlockActivity"
             android:excludeFromRecents="true"
             android:exported="false"
             android:launchMode="singleTop"
             android:theme="@style/Theme.PushupPatrol" />
-        <activity
-            android:name=".ui.main.AppSelectionActivity"
-            android:exported="false" />
-        <activity
-            android:name=".ui.main.MainActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
         <activity
             android:name=".ui.earning.PushupActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".ui.settings.SettingsActivity"
+            android:exported="false" />
+
+
+        <!-- Services -->
         <service
             android:name=".core.blocking.AppBlockerService"
             android:exported="true"
@@ -61,16 +91,17 @@
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
-
             <meta-data
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
-        </service> <!-- SINGLE, CORRECT declaration for TimerService -->
+        </service>
+
         <service
             android:name=".core.services.TimerService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
     </application>
 
 </manifest>
