@@ -228,8 +228,52 @@ class PushupDetector : TrackableActivity {
 
         poseDetector.process(image)
             .addOnSuccessListener { pose ->
+                // Call detectPushup first, as it calculates/updates these values
                 detectPushup(pose)
-                poseUpdateListener?.onPoseDetected(pose, imageWidth, imageHeight, isFrontCamera)
+
+                // Now, retrieve the values from the detector's state to pass to the listener
+                // (Assuming these are properties of PushupDetector: minObservedY, maxObservedY)
+                // And also the calculated thresholds and current Y being used.
+
+                // Need to ensure the values passed are the ones from the *current frame's analysis*
+                // This requires detectPushup to make them available or return them.
+                // For now, let's assume detectPushup has updated the class members:
+                // this.minObservedY, this.maxObservedY, and can provide currentY and thresholds
+
+                var frameMinY: Float? = null
+                var frameMaxY: Float? = null
+                var frameDownThr: Float? = null
+                var frameUpThr: Float? = null
+                var frameCurrentY: Float? = null
+
+                val noseLandmark = pose.getPoseLandmark(PoseLandmark.NOSE)
+                if (noseLandmark != null && noseLandmark.inFrameLikelihood >= landmarkConfidenceThreshold) {
+                    frameCurrentY = noseLandmark.position.y // The 'currentY' used in detectPushup
+                }
+
+                // Get the current values of these from the detector's state
+                frameMinY = this.minObservedY
+                frameMaxY = this.maxObservedY
+
+                if (this.minObservedY != null && this.maxObservedY != null) {
+                    val movementRange = this.maxObservedY!! - this.minObservedY!!
+                    if (movementRange >= this.minimumVerticalDisplacement) { // Check if range is valid
+                        frameDownThr = this.minObservedY!! + (movementRange * this.movementRangeFactorDown)
+                        frameUpThr = this.minObservedY!! + (movementRange * this.movementRangeFactorUp)
+                    }
+                }
+
+                poseUpdateListener?.onPoseDetected(
+                    pose,
+                    imageWidth,
+                    imageHeight,
+                    isFrontCamera,
+                    frameMinY,
+                    frameMaxY,
+                    frameDownThr,
+                    frameUpThr,
+                    frameCurrentY // The 'currentY' used in detectPushup for this frame
+                )
             }
             .addOnFailureListener { e ->
                 Log.e(TAG, "Pose detection failed", e)

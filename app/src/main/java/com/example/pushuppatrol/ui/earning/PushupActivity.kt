@@ -139,9 +139,29 @@ class PushupActivity : AppCompatActivity(), ActivityProgressListener, PoseProces
         binding.poseOverlayView.clear()
     }
 
-    override fun onPoseDetected(pose: Pose, imageWidth: Int, imageHeight: Int, isFrontCamera: Boolean) {
+    override fun onPoseDetected(
+        pose: Pose,
+        imageWidth: Int,
+        imageHeight: Int,
+        isFrontCamera: Boolean,
+        debugMinY: Float?,
+        debugMaxY: Float?,
+        debugDownThresholdY: Float?,
+        debugUpThresholdY: Float?,
+        debugCurrentY: Float?
+    ) {
         runOnUiThread {
-            binding.poseOverlayView.updatePose(pose, imageWidth, imageHeight, isFrontCamera)
+            binding.poseOverlayView.updatePose(
+                pose,
+                imageWidth,
+                imageHeight,
+                isFrontCamera,
+                debugMinY,
+                debugMaxY,
+                debugDownThresholdY,
+                debugUpThresholdY,
+                debugCurrentY
+            )
         }
     }
 

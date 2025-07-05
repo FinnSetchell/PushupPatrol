@@ -55,7 +55,18 @@ interface ActivityProgressListener {
     fun onSetupStateChanged(message: String, isReady: Boolean)
 }
 
-interface PoseUpdateListener { // Could be combined with ActivityProgressListener
-    fun onPoseDetected(pose: Pose, imageWidth: Int, imageHeight: Int, isFrontCamera: Boolean)
-    fun onClearPose() // To clear the overlay when no pose is detected or tracking stops
+interface PoseUpdateListener {
+    fun onPoseDetected(
+        pose: Pose,
+        imageWidth: Int,
+        imageHeight: Int,
+        isFrontCamera: Boolean,
+        // Add new debug parameters
+        debugMinY: Float?,
+        debugMaxY: Float?,
+        debugDownThresholdY: Float?,
+        debugUpThresholdY: Float?,
+        debugCurrentY: Float?
+    )
+    fun onClearPose()
 }
